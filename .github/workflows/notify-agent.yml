@@ -1,4 +1,4 @@
-name: Notify Agent
+name: Notify Clark
 
 on:
   issues:
@@ -29,85 +29,72 @@ jobs:
               TITLE="${{ github.event.issue.title }}"
               NUMBER="${{ github.event.issue.number }}"
               URL="${{ github.event.issue.html_url }}"
-              BODY="${{ github.event.issue.body }}"
               
               if [ "$ACTION" = "opened" ]; then
-                MSG="[GitHub] New issue #$NUMBER in $REPO: $TITLE\n\nBy: $SENDER\n\n${BODY:0:500}\n\nURL: $URL"
+                MSG="🆕 **New Issue #$NUMBER** in \`$REPO\`\n**$TITLE**\nBy: $SENDER\n$URL"
               elif [ "$ACTION" = "closed" ]; then
-                MSG="[GitHub] Issue #$NUMBER closed in $REPO: $TITLE\nBy: $SENDER"
+                MSG="✅ **Issue #$NUMBER closed** in \`$REPO\`\n**$TITLE**\nBy: $SENDER"
               elif [ "$ACTION" = "reopened" ]; then
-                MSG="[GitHub] Issue #$NUMBER reopened in $REPO: $TITLE\nBy: $SENDER"
+                MSG="🔄 **Issue #$NUMBER reopened** in \`$REPO\`\n**$TITLE**\nBy: $SENDER"
               fi
-              SESSION_KEY="github:$REPO:issue:$NUMBER"
               ;;
             
             issue_comment)
               TITLE="${{ github.event.issue.title }}"
               NUMBER="${{ github.event.issue.number }}"
               URL="${{ github.event.comment.html_url }}"
-              BODY="${{ github.event.comment.body }}"
               
-              MSG="[GitHub] Comment on #$NUMBER in $REPO: $TITLE\n\nBy: $SENDER\n\n${BODY:0:500}\n\nURL: $URL"
-              SESSION_KEY="github:$REPO:issue:$NUMBER"
+              MSG="💬 **Comment on #$NUMBER** in \`$REPO\`\n**$TITLE**\nBy: $SENDER\n$URL"
               ;;
             
             pull_request)
               TITLE="${{ github.event.pull_request.title }}"
               NUMBER="${{ github.event.pull_request.number }}"
               URL="${{ github.event.pull_request.html_url }}"
-              BODY="${{ github.event.pull_request.body }}"
-              HEAD="${{ github.event.pull_request.head.ref }}"
-              BASE="${{ github.event.pull_request.base.ref }}"
               MERGED="${{ github.event.pull_request.merged }}"
               
               if [ "$ACTION" = "opened" ]; then
-                MSG="[GitHub] New PR #$NUMBER in $REPO: $TITLE\n\nBy: $SENDER\nBranch: $HEAD → $BASE\n\n${BODY:0:500}\n\nURL: $URL"
+                MSG="🔀 **New PR #$NUMBER** in \`$REPO\`\n**$TITLE**\nBy: $SENDER\n$URL"
               elif [ "$ACTION" = "closed" ]; then
                 if [ "$MERGED" = "true" ]; then
-                  MSG="[GitHub] PR #$NUMBER merged in $REPO: $TITLE"
+                  MSG="🎉 **PR #$NUMBER merged** in \`$REPO\`\n**$TITLE**"
                 else
-                  MSG="[GitHub] PR #$NUMBER closed (not merged) in $REPO: $TITLE"
+                  MSG="❌ **PR #$NUMBER closed** (not merged) in \`$REPO\`\n**$TITLE**"
                 fi
               fi
-              SESSION_KEY="github:$REPO:pr:$NUMBER"
               ;;
             
             pull_request_review)
               NUMBER="${{ github.event.pull_request.number }}"
               TITLE="${{ github.event.pull_request.title }}"
               STATE="${{ github.event.review.state }}"
-              BODY="${{ github.event.review.body }}"
               
-              MSG="[GitHub] PR #$NUMBER review ($STATE) in $REPO: $TITLE\n\nBy: $SENDER\n\n${BODY:0:500}"
-              SESSION_KEY="github:$REPO:pr:$NUMBER"
+              if [ "$STATE" = "approved" ]; then
+                EMOJI="✅"
+              elif [ "$STATE" = "changes_requested" ]; then
+                EMOJI="🔴"
+              else
+                EMOJI="💭"
+              fi
+              MSG="$EMOJI **PR #$NUMBER review ($STATE)** in \`$REPO\`\n**$TITLE**\nBy: $SENDER"
               ;;
             
             release)
               TAG="${{ github.event.release.tag_name }}"
               NAME="${{ github.event.release.name }}"
               URL="${{ github.event.release.html_url }}"
-              BODY="${{ github.event.release.body }}"
               
-              MSG="[GitHub] Release $TAG in $REPO: $NAME\n\nBy: $SENDER\n\n${BODY:0:500}\n\nURL: $URL"
-              SESSION_KEY="github:$REPO:release:$TAG"
+              MSG="🚀 **Release $TAG** in \`$REPO\`\n**$NAME**\n$URL"
               ;;
           esac
           
           # Escape for JSON
-          MSG=$(echo "$MSG" | jq -Rs .)
+          MSG=$(echo -e "$MSG" | jq -Rs .)
           echo "message=$MSG" >> $GITHUB_OUTPUT
-          echo "session_key=$SESSION_KEY" >> $GITHUB_OUTPUT
       
-      - name: Notify Clawdbot
+      - name: Send to Discord
         if: steps.message.outputs.message != ''
         run: |
-          curl -X POST "${{ secrets.CLAWDBOT_WEBHOOK_URL }}" \
-            -H "Authorization: Bearer ${{ secrets.CLAWDBOT_WEBHOOK_TOKEN }}" \
+          curl -X POST "${{ secrets.DISCORD_WEBHOOK_URL }}" \
             -H "Content-Type: application/json" \
-            -d '{
-              "message": ${{ steps.message.outputs.message }},
-              "name": "GitHub",
-              "sessionKey": "${{ steps.message.outputs.session_key }}",
-              "deliver": true,
-              "wakeMode": "now"
-            }'
+            -d "{\"content\": ${{ steps.message.outputs.message }}}"
