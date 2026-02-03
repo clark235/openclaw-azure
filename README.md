@@ -2,35 +2,56 @@
 
 One-click deployment of [OpenCLAW](https://github.com/clawdbot/clawdbot) to Azure.
 
+## 🚀 Quick Start (Recommended)
+
+Deploy with a pre-configured messaging channel - your bot will be ready to chat immediately!
+
+[![Deploy Quick Start](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fclark235%2Fopenclaw-azure%2Fmain%2Fazuredeploy-quickstart.json)
+
+**What you'll need:**
+1. **SSH Key** - Your public SSH key for VM access
+2. **Messaging Token** - Telegram or Discord bot token (see below)
+3. **API Key** - Anthropic or OpenAI key (optional - can add later)
+
+### Getting Your Bot Token
+
+#### Telegram (Easiest - 2 minutes)
+1. Open Telegram and search for **@BotFather**
+2. Send `/newbot` and follow the prompts
+3. Copy the token (looks like `123456789:ABCdefGHIjklMNOpqrsTUVwxyz`)
+4. Paste it in the deployment form
+
+#### Discord (5 minutes)
+1. Go to [discord.com/developers/applications](https://discord.com/developers/applications)
+2. Click "New Application" → name it → Create
+3. Go to "Bot" → "Add Bot" → "Yes, do it!"
+4. Click "Reset Token" → Copy the token
+5. Enable "Message Content Intent" under Privileged Gateway Intents
+6. Go to OAuth2 → URL Generator → Select "bot" → Select permissions (Send Messages, Read Message History)
+7. Copy the URL and open it to invite the bot to your server
+8. Paste the bot token in the deployment form
+
+---
+
 ## Deployment Options
 
-### Option 1: Virtual Machine (Recommended)
+### Option 1: Quick Start (Pre-configured Channel)
 
-Full VM with SSH access, persistent storage, and auto-start on boot.
+Best for getting started fast - bot connects automatically.
 
-[![Deploy VM to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fclark235%2Fopenclaw-azure%2Fmain%2Fazuredeploy.json)
+[![Deploy Quick Start](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fclark235%2Fopenclaw-azure%2Fmain%2Fazuredeploy-quickstart.json)
 
-**Best for:** Personal use, development, full control
+### Option 2: VM Only (Configure Later)
 
-| Size | vCPU | RAM | Monthly Cost* |
-|------|------|-----|--------------|
-| Standard_B1ms | 1 | 2 GB | ~$15 |
-| Standard_B2s | 2 | 4 GB | ~$30 |
+Deploy the VM first, configure channels via Control UI.
 
-### Option 2: Container Instance (Serverless)
+[![Deploy VM](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fclark235%2Fopenclaw-azure%2Fmain%2Fazuredeploy.json)
 
-Serverless container - no VM to manage, pay only for what you use.
+### Option 3: Container (Serverless)
 
-[![Deploy Container to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fclark235%2Fopenclaw-azure%2Fmain%2Fazuredeploy-container.json)
+No VM to manage, but costs more (~$35-45/mo vs ~$15/mo).
 
-**Best for:** Quick testing, serverless preference, minimal management
-
-| Config | vCPU | RAM | Monthly Cost* |
-|--------|------|-----|--------------|
-| Default | 1 | 2 GB | ~$35-45 |
-| Medium | 2 | 4 GB | ~$70-90 |
-
-*Costs vary by region. VM includes ~$1-2/mo storage.
+[![Deploy Container](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fclark235%2Fopenclaw-azure%2Fmain%2Fazuredeploy-container.json)
 
 ---
 
@@ -45,83 +66,78 @@ OpenCLAW is an open-source AI assistant that runs on your own infrastructure.
 
 ---
 
-## Quick Start
+## Quick Start Parameters
 
-### VM Deployment (CLI)
-
-```bash
-# Clone this repo
-git clone https://github.com/clark235/openclaw-azure.git
-cd openclaw-azure
-
-# Create resource group
-az group create --name openclaw-rg --location eastus
-
-# Deploy VM
-az deployment group create \
-  --resource-group openclaw-rg \
-  --template-file azuredeploy.json \
-  --parameters adminPasswordOrKey="$(cat ~/.ssh/id_ed25519.pub)"
-```
-
-### Container Deployment (CLI)
-
-```bash
-# Deploy container (API keys optional - can configure later)
-az deployment group create \
-  --resource-group openclaw-rg \
-  --template-file azuredeploy-container.json
-```
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `vmName` | No | VM name (default: openclaw) |
+| `vmSize` | No | VM size (default: Standard_B1ms ~$15/mo) |
+| `adminPasswordOrKey` | **Yes** | Your SSH public key |
+| `messagingChannel` | No | `telegram`, `discord`, or `none` |
+| `telegramBotToken` | If Telegram | Token from @BotFather |
+| `discordBotToken` | If Discord | Token from Discord Developer Portal |
+| `anthropicApiKey` | Recommended | From console.anthropic.com |
+| `openaiApiKey` | Optional | From platform.openai.com |
 
 ---
 
-## VM Parameters
+## After Deployment
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `vmName` | `openclaw` | VM name |
-| `location` | Resource group location | Azure region |
-| `vmSize` | `Standard_B1ms` | VM size |
-| `adminUsername` | `clawdadmin` | SSH username |
-| `authenticationType` | `sshPublicKey` | `sshPublicKey` or `password` |
-| `adminPasswordOrKey` | *required* | SSH public key or password |
+### If you configured Telegram:
+1. Wait 3-5 minutes for setup to complete
+2. Open Telegram and message your bot
+3. Start chatting! 🎉
 
-## Container Parameters
+### If you configured Discord:
+1. Wait 3-5 minutes for setup to complete
+2. Make sure you've invited the bot to your server
+3. DM the bot or @mention it in a channel
+4. Start chatting! 🎉
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `containerName` | `openclaw` | Container name |
-| `location` | Resource group location | Azure region |
-| `cpuCores` | `1` | CPU cores (1, 2, or 4) |
-| `memoryInGb` | `2` | Memory in GB (2, 4, or 8) |
-| `anthropicApiKey` | *optional* | Anthropic API key |
-| `discordToken` | *optional* | Discord bot token |
+### If no channel configured:
+1. Open the `controlUIUrl` from deployment outputs
+2. Enter the `gatewayToken` to authenticate
+3. Add your API keys and channels in the Control UI
 
 ---
 
-## Post-Deployment Setup
+## Cost Comparison
 
-### 1. Access the Control UI
+| Option | vCPU | RAM | Monthly Cost* |
+|--------|------|-----|--------------|
+| **VM (B1ms)** | 1 | 2 GB | **~$15** ✓ Recommended |
+| VM (B2s) | 2 | 4 GB | ~$30 |
+| Container | 1 | 2 GB | ~$35-45 |
 
-After deployment completes, open the `controlUIUrl` from outputs:
-- VM: `http://openclaw-xxxxx.eastus.cloudapp.azure.com:18789`
-- Container: `http://openclaw-xxxxx.eastus.azurecontainer.io:18789`
+*Costs vary by region. VM includes ~$1-2/mo storage.
 
-### 2. Enter Gateway Token
+---
 
-Use the `gatewayToken` from deployment outputs to authenticate.
+## CLI Deployment
 
-### 3. Configure API Keys
+### Quick Start with Telegram
+```bash
+az deployment group create \
+  --resource-group openclaw-rg \
+  --template-file azuredeploy-quickstart.json \
+  --parameters \
+    adminPasswordOrKey="$(cat ~/.ssh/id_ed25519.pub)" \
+    messagingChannel="telegram" \
+    telegramBotToken="YOUR_BOT_TOKEN" \
+    anthropicApiKey="YOUR_API_KEY"
+```
 
-In the Control UI, add your AI provider API keys:
-- **Anthropic**: [console.anthropic.com](https://console.anthropic.com)
-- **OpenAI**: [platform.openai.com](https://platform.openai.com)
-
-### 4. Add Channels (Optional)
-
-- **Discord**: Create bot at [discord.com/developers](https://discord.com/developers)
-- **Telegram**: Create bot via [@BotFather](https://t.me/botfather)
-- **WhatsApp**: Scan QR code in Control UI
+### Quick Start with Discord
+```bash
+az deployment group create \
+  --resource-group openclaw-rg \
+  --template-file azuredeploy-quickstart.json \
+  --parameters \
+    adminPasswordOrKey="$(cat ~/.ssh/id_ed25519.pub)" \
+    messagingChannel="discord" \
+    discordBotToken="YOUR_BOT_TOKEN" \
+    anthropicApiKey="YOUR_API_KEY"
+```
 
 ---
 
@@ -150,60 +166,24 @@ sudo systemctl restart openclaw
 
 ---
 
-## Container Management
-
-```bash
-# View container logs
-az container logs --resource-group openclaw-rg --name openclaw
-
-# Restart container
-az container restart --resource-group openclaw-rg --name openclaw
-
-# Delete and redeploy to update
-az container delete --resource-group openclaw-rg --name openclaw --yes
-az deployment group create --resource-group openclaw-rg --template-file azuredeploy-container.json
-```
-
----
-
-## VM vs Container: Which to Choose?
-
-| Feature | VM | Container |
-|---------|----|-----------| 
-| **SSH Access** | ✅ Yes | ❌ No |
-| **Persistent Storage** | ✅ Full disk | ✅ Azure Files |
-| **Auto-restart** | ✅ systemd | ✅ Always restart |
-| **Management** | More control | Less maintenance |
-| **Cost (2GB)** | ~$15/mo | ~$35-45/mo |
-| **Boot Time** | ~2-3 min | ~3-5 min |
-| **Best For** | Production, dev | Testing, serverless |
-
-**Recommendation:** Use **VM** for production/daily use (cheaper, more control). Use **Container** for quick testing or if you prefer serverless.
-
----
-
 ## Troubleshooting
 
-### Gateway not accessible
+### Bot not responding?
 
-1. Wait 3-5 minutes after deployment for setup to complete
-2. Check deployment outputs for correct URL
-3. Verify NSG/firewall allows port 18789
+1. **Wait 3-5 minutes** - Setup takes time
+2. **Check service status**: `ssh clawdadmin@<fqdn>` then `sudo systemctl status openclaw`
+3. **Check logs**: `sudo journalctl -u openclaw -n 50`
+4. **Verify token**: Make sure you copied the full bot token
 
-### VM: Check service status
+### Telegram specific
+- Make sure you messaged @BotFather (not a fake)
+- Token format: `123456789:ABCdefGHI...` (numbers:letters)
+- Try `/start` command to your bot
 
-```bash
-ssh clawdadmin@<fqdn>
-sudo systemctl status openclaw
-sudo journalctl -u openclaw -n 50
-sudo cat /var/log/openclaw-setup.log
-```
-
-### Container: Check logs
-
-```bash
-az container logs --resource-group openclaw-rg --name openclaw --follow
-```
+### Discord specific
+- Enable "Message Content Intent" in Discord Developer Portal
+- Make sure bot is invited to your server with correct permissions
+- Try @mentioning the bot in a channel
 
 ---
 
@@ -211,19 +191,20 @@ az container logs --resource-group openclaw-rg --name openclaw --follow
 
 | File | Description |
 |------|-------------|
-| `azuredeploy.json` | VM ARM template |
-| `azuredeploy-container.json` | Container ARM template |
+| `azuredeploy-quickstart.json` | **Quick Start** - VM with channel config |
+| `azuredeploy.json` | VM only (configure later) |
+| `azuredeploy-container.json` | Container deployment |
 | `main.bicep` | VM Bicep template |
 | `container.bicep` | Container Bicep template |
 
 ---
 
-## Security Recommendations
+## Security Notes
 
-1. **Restrict access**: Update NSG to allow only your IP
-2. **Use SSH keys**: For VM, avoid password authentication  
-3. **Enable Tailscale**: For private access without exposing ports
-4. **Regular updates**: Keep OpenCLAW updated
+1. **API keys are stored securely** in `/home/clawdadmin/.clawdbot/env` with restricted permissions
+2. **Bot tokens are in the config** file with 600 permissions
+3. **Restrict SSH access** after deployment - update NSG to allow only your IP
+4. **Use SSH keys** instead of passwords
 
 ---
 
@@ -232,6 +213,8 @@ az container logs --resource-group openclaw-rg --name openclaw --follow
 - [OpenCLAW Documentation](https://docs.clawd.bot)
 - [OpenCLAW GitHub](https://github.com/clawdbot/clawdbot)
 - [OpenCLAW Discord](https://discord.com/invite/clawd)
+- [Telegram BotFather](https://t.me/botfather)
+- [Discord Developer Portal](https://discord.com/developers/applications)
 
 ## License
 

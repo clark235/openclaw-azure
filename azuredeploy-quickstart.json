@@ -1,0 +1,287 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "description": "OpenCLAW Quick Start - Deploy with pre-configured messaging channel",
+    "_generator": {
+      "name": "openclaw-azure",
+      "version": "1.1.0"
+    }
+  },
+  "parameters": {
+    "vmName": {
+      "type": "string",
+      "defaultValue": "openclaw",
+      "metadata": {
+        "description": "Name for the virtual machine"
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Azure region"
+      }
+    },
+    "vmSize": {
+      "type": "string",
+      "defaultValue": "Standard_B1ms",
+      "allowedValues": [
+        "Standard_B1ls",
+        "Standard_B1s",
+        "Standard_B1ms",
+        "Standard_B2s",
+        "Standard_B2ms"
+      ],
+      "metadata": {
+        "description": "VM size (~$15/mo for B1ms)"
+      }
+    },
+    "adminUsername": {
+      "type": "string",
+      "defaultValue": "clawdadmin",
+      "metadata": {
+        "description": "SSH username"
+      }
+    },
+    "adminPasswordOrKey": {
+      "type": "secureString",
+      "metadata": {
+        "description": "SSH public key (recommended) or password"
+      }
+    },
+    "authenticationType": {
+      "type": "string",
+      "defaultValue": "sshPublicKey",
+      "allowedValues": ["sshPublicKey", "password"],
+      "metadata": {
+        "description": "Authentication type"
+      }
+    },
+    "messagingChannel": {
+      "type": "string",
+      "defaultValue": "none",
+      "allowedValues": [
+        "none",
+        "telegram",
+        "discord"
+      ],
+      "metadata": {
+        "description": "Pre-configure a messaging channel (Telegram is easiest - just need a bot token from @BotFather)"
+      }
+    },
+    "telegramBotToken": {
+      "type": "secureString",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Telegram bot token from @BotFather (required if messagingChannel is 'telegram')"
+      }
+    },
+    "discordBotToken": {
+      "type": "secureString",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Discord bot token (required if messagingChannel is 'discord')"
+      }
+    },
+    "anthropicApiKey": {
+      "type": "secureString",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Anthropic API key (recommended - get from console.anthropic.com)"
+      }
+    },
+    "openaiApiKey": {
+      "type": "secureString",
+      "defaultValue": "",
+      "metadata": {
+        "description": "OpenAI API key (optional alternative)"
+      }
+    }
+  },
+  "variables": {
+    "vnetName": "[concat(parameters('vmName'), '-vnet')]",
+    "subnetName": "default",
+    "nsgName": "[concat(parameters('vmName'), '-nsg')]",
+    "publicIpName": "[concat(parameters('vmName'), '-pip')]",
+    "nicName": "[concat(parameters('vmName'), '-nic')]",
+    "dnsLabel": "[concat('openclaw-', uniqueString(resourceGroup().id, parameters('vmName')))]",
+    "gatewayToken": "[concat(uniqueString(resourceGroup().id, parameters('vmName'), deployment().name), uniqueString(subscription().subscriptionId, parameters('vmName'), parameters('adminUsername')))]",
+    "linuxConfiguration": {
+      "disablePasswordAuthentication": true,
+      "ssh": {
+        "publicKeys": [
+          {
+            "path": "[concat('/home/', parameters('adminUsername'), '/.ssh/authorized_keys')]",
+            "keyData": "[parameters('adminPasswordOrKey')]"
+          }
+        ]
+      }
+    },
+    "telegramConfig": "[if(and(equals(parameters('messagingChannel'), 'telegram'), not(empty(parameters('telegramBotToken')))), concat(',\"channels\":{\"telegram\":{\"enabled\":true,\"botToken\":\"', parameters('telegramBotToken'), '\",\"dmPolicy\":\"open\",\"dm\":{\"allowFrom\":[\"*\"]}}}'), '')]",
+    "discordConfig": "[if(and(equals(parameters('messagingChannel'), 'discord'), not(empty(parameters('discordBotToken')))), concat(',\"channels\":{\"discord\":{\"enabled\":true,\"token\":\"', parameters('discordBotToken'), '\",\"dm\":{\"policy\":\"open\",\"allowFrom\":[\"*\"]}}}'), '')]",
+    "channelConfig": "[if(equals(parameters('messagingChannel'), 'telegram'), variables('telegramConfig'), if(equals(parameters('messagingChannel'), 'discord'), variables('discordConfig'), ''))]",
+    "anthropicEnv": "[if(not(empty(parameters('anthropicApiKey'))), concat('export ANTHROPIC_API_KEY=\"', parameters('anthropicApiKey'), '\"\n'), '')]",
+    "openaiEnv": "[if(not(empty(parameters('openaiApiKey'))), concat('export OPENAI_API_KEY=\"', parameters('openaiApiKey'), '\"\n'), '')]",
+    "setupScript": "[base64(concat('#!/bin/bash\nset -e\nexport DEBIAN_FRONTEND=noninteractive\necho \"[$(date)] Starting OpenCLAW Quick Start setup...\" | tee /var/log/openclaw-setup.log\n\n# Install Node.js 22\ncurl -fsSL https://deb.nodesource.com/setup_22.x | bash - >> /var/log/openclaw-setup.log 2>&1\napt-get install -y nodejs >> /var/log/openclaw-setup.log 2>&1\necho \"[$(date)] Node.js installed: $(node --version)\" | tee -a /var/log/openclaw-setup.log\n\n# Install OpenCLAW\nnpm install -g clawdbot >> /var/log/openclaw-setup.log 2>&1\necho \"[$(date)] OpenCLAW installed: $(clawdbot --version)\" | tee -a /var/log/openclaw-setup.log\n\n# Create directories\nmkdir -p /home/', parameters('adminUsername'), '/clawd\nmkdir -p /home/', parameters('adminUsername'), '/.clawdbot\n\n# Create config with channel\ncat > /home/', parameters('adminUsername'), '/.clawdbot/clawdbot.json << ''CONFIGEOF''\n{\"gateway\":{\"mode\":\"local\",\"port\":18789,\"bind\":\"lan\",\"auth\":{\"mode\":\"token\",\"token\":\"', variables('gatewayToken'), '\"}},\"agents\":{\"defaults\":{\"workspace\":\"/home/', parameters('adminUsername'), '/clawd\"}}', variables('channelConfig'), '}\nCONFIGEOF\n\n# Create environment file for API keys\ncat > /home/', parameters('adminUsername'), '/.clawdbot/env << ''ENVEOF''\n', variables('anthropicEnv'), variables('openaiEnv'), 'ENVEOF\n\n# Create systemd service with env file\ncat > /etc/systemd/system/openclaw.service << ''SERVICEEOF''\n[Unit]\nDescription=OpenCLAW Gateway\nAfter=network.target\nWants=network-online.target\n\n[Service]\nType=simple\nUser=', parameters('adminUsername'), '\nWorkingDirectory=/home/', parameters('adminUsername'), '/clawd\nEnvironmentFile=-/home/', parameters('adminUsername'), '/.clawdbot/env\nEnvironment=NODE_ENV=production\nExecStart=/usr/bin/clawdbot gateway\nRestart=always\nRestartSec=10\nStandardOutput=journal\nStandardError=journal\n\n[Install]\nWantedBy=multi-user.target\nSERVICEEOF\n\n# Set permissions\nchown -R ', parameters('adminUsername'), ':', parameters('adminUsername'), ' /home/', parameters('adminUsername'), '/clawd\nchown -R ', parameters('adminUsername'), ':', parameters('adminUsername'), ' /home/', parameters('adminUsername'), '/.clawdbot\nchmod 600 /home/', parameters('adminUsername'), '/.clawdbot/clawdbot.json\nchmod 600 /home/', parameters('adminUsername'), '/.clawdbot/env\n\n# Enable and start service\nsystemctl daemon-reload\nsystemctl enable openclaw\nsystemctl start openclaw\n\n# Create info file\nPUBLIC_IP=$(curl -s ifconfig.me)\nCHANNEL_INFO=\"', if(equals(parameters('messagingChannel'), 'telegram'), 'Telegram: Bot will auto-connect! DM your bot to start chatting.', if(equals(parameters('messagingChannel'), 'discord'), 'Discord: Bot will auto-connect! Invite it to your server and DM or mention it.', 'No channel configured. Add one via the Control UI.')), '\"\ncat > /home/', parameters('adminUsername'), '/OPENCLAW_INFO.txt << EOF\n=====================================\n  OpenCLAW Quick Start Complete!\n=====================================\n\nControl UI: http://${PUBLIC_IP}:18789\nGateway Token: ', variables('gatewayToken'), '\n\nMessaging Channel: ', parameters('messagingChannel'), '\n${CHANNEL_INFO}\n\nSSH: ssh ', parameters('adminUsername'), '@$(hostname -f)\n\nService Commands:\n  sudo systemctl status openclaw\n  sudo systemctl restart openclaw\n  sudo journalctl -u openclaw -f\n\nDocs: https://docs.clawd.bot\n=====================================\nEOF\nchown ', parameters('adminUsername'), ':', parameters('adminUsername'), ' /home/', parameters('adminUsername'), '/OPENCLAW_INFO.txt\n\necho \"[$(date)] OpenCLAW Quick Start setup complete!\" | tee -a /var/log/openclaw-setup.log\necho \"[$(date)] Channel: ', parameters('messagingChannel'), '\" | tee -a /var/log/openclaw-setup.log\n'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "apiVersion": "2023-05-01",
+      "name": "[variables('nsgName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "SSH",
+            "properties": {
+              "priority": 1000,
+              "direction": "Inbound",
+              "access": "Allow",
+              "protocol": "TCP",
+              "sourcePortRange": "*",
+              "destinationPortRange": "22",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*"
+            }
+          },
+          {
+            "name": "OpenCLAW-Gateway",
+            "properties": {
+              "priority": 1010,
+              "direction": "Inbound",
+              "access": "Allow",
+              "protocol": "TCP",
+              "sourcePortRange": "*",
+              "destinationPortRange": "18789",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "apiVersion": "2023-05-01",
+      "name": "[variables('publicIpName')]",
+      "location": "[parameters('location')]",
+      "sku": { "name": "Standard" },
+      "properties": {
+        "publicIPAllocationMethod": "Static",
+        "dnsSettings": { "domainNameLabel": "[variables('dnsLabel')]" }
+      }
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "2023-05-01",
+      "name": "[variables('vnetName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "addressSpace": { "addressPrefixes": ["10.0.0.0/16"] },
+        "subnets": [{ "name": "[variables('subnetName')]", "properties": { "addressPrefix": "10.0.0.0/24" } }]
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "2023-05-01",
+      "name": "[variables('nicName')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName'))]",
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]",
+        "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
+      ],
+      "properties": {
+        "ipConfigurations": [{
+          "name": "ipconfig1",
+          "properties": {
+            "privateIPAllocationMethod": "Dynamic",
+            "publicIPAddress": { "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName'))]" },
+            "subnet": { "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), variables('subnetName'))]" }
+          }
+        }],
+        "networkSecurityGroup": { "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]" }
+      }
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "apiVersion": "2023-07-01",
+      "name": "[parameters('vmName')]",
+      "location": "[parameters('location')]",
+      "dependsOn": ["[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]"],
+      "properties": {
+        "hardwareProfile": { "vmSize": "[parameters('vmSize')]" },
+        "osProfile": {
+          "computerName": "[parameters('vmName')]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "adminPassword": "[if(equals(parameters('authenticationType'), 'password'), parameters('adminPasswordOrKey'), null())]",
+          "linuxConfiguration": "[if(equals(parameters('authenticationType'), 'sshPublicKey'), variables('linuxConfiguration'), null())]"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "Canonical",
+            "offer": "ubuntu-24_04-lts",
+            "sku": "server",
+            "version": "latest"
+          },
+          "osDisk": {
+            "createOption": "FromImage",
+            "diskSizeGB": 30,
+            "managedDisk": { "storageAccountType": "Standard_LRS" }
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [{ "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]" }]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines/extensions",
+      "apiVersion": "2023-07-01",
+      "name": "[concat(parameters('vmName'), '/OpenCLAWSetup')]",
+      "location": "[parameters('location')]",
+      "dependsOn": ["[resourceId('Microsoft.Compute/virtualMachines', parameters('vmName'))]"],
+      "properties": {
+        "publisher": "Microsoft.Azure.Extensions",
+        "type": "CustomScript",
+        "typeHandlerVersion": "2.1",
+        "autoUpgradeMinorVersion": true,
+        "protectedSettings": {
+          "script": "[variables('setupScript')]"
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "publicIPAddress": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName'))).ipAddress]"
+    },
+    "fqdn": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName'))).dnsSettings.fqdn]"
+    },
+    "sshCommand": {
+      "type": "string",
+      "value": "[concat('ssh ', parameters('adminUsername'), '@', reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName'))).dnsSettings.fqdn)]"
+    },
+    "controlUIUrl": {
+      "type": "string",
+      "value": "[concat('http://', reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName'))).dnsSettings.fqdn, ':18789')]"
+    },
+    "gatewayToken": {
+      "type": "string",
+      "value": "[variables('gatewayToken')]"
+    },
+    "messagingChannel": {
+      "type": "string",
+      "value": "[parameters('messagingChannel')]"
+    },
+    "nextSteps": {
+      "type": "string",
+      "value": "[if(equals(parameters('messagingChannel'), 'telegram'), 'Your Telegram bot is ready! Send a message to your bot to start chatting.', if(equals(parameters('messagingChannel'), 'discord'), 'Your Discord bot is ready! Invite it to your server and DM or @mention it.', 'Open the Control UI and configure your API keys and messaging channels.'))]"
+    }
+  }
+}
