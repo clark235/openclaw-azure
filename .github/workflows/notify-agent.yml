@@ -1,0 +1,113 @@
+name: Notify Agent
+
+on:
+  issues:
+    types: [opened, closed, reopened]
+  issue_comment:
+    types: [created]
+  pull_request:
+    types: [opened, closed, reopened]
+  pull_request_review:
+    types: [submitted]
+  release:
+    types: [published]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build message
+        id: message
+        run: |
+          EVENT="${{ github.event_name }}"
+          ACTION="${{ github.event.action }}"
+          REPO="${{ github.repository }}"
+          SENDER="${{ github.actor }}"
+          
+          case "$EVENT" in
+            issues)
+              TITLE="${{ github.event.issue.title }}"
+              NUMBER="${{ github.event.issue.number }}"
+              URL="${{ github.event.issue.html_url }}"
+              BODY="${{ github.event.issue.body }}"
+              
+              if [ "$ACTION" = "opened" ]; then
+                MSG="[GitHub] New issue #$NUMBER in $REPO: $TITLE\n\nBy: $SENDER\n\n${BODY:0:500}\n\nURL: $URL"
+              elif [ "$ACTION" = "closed" ]; then
+                MSG="[GitHub] Issue #$NUMBER closed in $REPO: $TITLE\nBy: $SENDER"
+              elif [ "$ACTION" = "reopened" ]; then
+                MSG="[GitHub] Issue #$NUMBER reopened in $REPO: $TITLE\nBy: $SENDER"
+              fi
+              SESSION_KEY="github:$REPO:issue:$NUMBER"
+              ;;
+            
+            issue_comment)
+              TITLE="${{ github.event.issue.title }}"
+              NUMBER="${{ github.event.issue.number }}"
+              URL="${{ github.event.comment.html_url }}"
+              BODY="${{ github.event.comment.body }}"
+              
+              MSG="[GitHub] Comment on #$NUMBER in $REPO: $TITLE\n\nBy: $SENDER\n\n${BODY:0:500}\n\nURL: $URL"
+              SESSION_KEY="github:$REPO:issue:$NUMBER"
+              ;;
+            
+            pull_request)
+              TITLE="${{ github.event.pull_request.title }}"
+              NUMBER="${{ github.event.pull_request.number }}"
+              URL="${{ github.event.pull_request.html_url }}"
+              BODY="${{ github.event.pull_request.body }}"
+              HEAD="${{ github.event.pull_request.head.ref }}"
+              BASE="${{ github.event.pull_request.base.ref }}"
+              MERGED="${{ github.event.pull_request.merged }}"
+              
+              if [ "$ACTION" = "opened" ]; then
+                MSG="[GitHub] New PR #$NUMBER in $REPO: $TITLE\n\nBy: $SENDER\nBranch: $HEAD → $BASE\n\n${BODY:0:500}\n\nURL: $URL"
+              elif [ "$ACTION" = "closed" ]; then
+                if [ "$MERGED" = "true" ]; then
+                  MSG="[GitHub] PR #$NUMBER merged in $REPO: $TITLE"
+                else
+                  MSG="[GitHub] PR #$NUMBER closed (not merged) in $REPO: $TITLE"
+                fi
+              fi
+              SESSION_KEY="github:$REPO:pr:$NUMBER"
+              ;;
+            
+            pull_request_review)
+              NUMBER="${{ github.event.pull_request.number }}"
+              TITLE="${{ github.event.pull_request.title }}"
+              STATE="${{ github.event.review.state }}"
+              BODY="${{ github.event.review.body }}"
+              
+              MSG="[GitHub] PR #$NUMBER review ($STATE) in $REPO: $TITLE\n\nBy: $SENDER\n\n${BODY:0:500}"
+              SESSION_KEY="github:$REPO:pr:$NUMBER"
+              ;;
+            
+            release)
+              TAG="${{ github.event.release.tag_name }}"
+              NAME="${{ github.event.release.name }}"
+              URL="${{ github.event.release.html_url }}"
+              BODY="${{ github.event.release.body }}"
+              
+              MSG="[GitHub] Release $TAG in $REPO: $NAME\n\nBy: $SENDER\n\n${BODY:0:500}\n\nURL: $URL"
+              SESSION_KEY="github:$REPO:release:$TAG"
+              ;;
+          esac
+          
+          # Escape for JSON
+          MSG=$(echo "$MSG" | jq -Rs .)
+          echo "message=$MSG" >> $GITHUB_OUTPUT
+          echo "session_key=$SESSION_KEY" >> $GITHUB_OUTPUT
+      
+      - name: Notify Clawdbot
+        if: steps.message.outputs.message != ''
+        run: |
+          curl -X POST "${{ secrets.CLAWDBOT_WEBHOOK_URL }}" \
+            -H "Authorization: Bearer ${{ secrets.CLAWDBOT_WEBHOOK_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "message": ${{ steps.message.outputs.message }},
+              "name": "GitHub",
+              "sessionKey": "${{ steps.message.outputs.session_key }}",
+              "deliver": true,
+              "wakeMode": "now"
+            }'
