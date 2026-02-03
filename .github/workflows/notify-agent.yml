@@ -16,8 +16,9 @@ jobs:
   notify:
     runs-on: ubuntu-latest
     steps:
-      - name: Build message
-        id: message
+      - name: Send to Discord
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: |
           EVENT="${{ github.event_name }}"
           ACTION="${{ github.event.action }}"
@@ -26,47 +27,60 @@ jobs:
           
           case "$EVENT" in
             issues)
-              TITLE="${{ github.event.issue.title }}"
+              TITLE=$(echo '${{ github.event.issue.title }}' | head -c 100)
               NUMBER="${{ github.event.issue.number }}"
               URL="${{ github.event.issue.html_url }}"
               
               if [ "$ACTION" = "opened" ]; then
-                MSG="🆕 **New Issue #$NUMBER** in \`$REPO\`\n**$TITLE**\nBy: $SENDER\n$URL"
+                MSG="🆕 **New Issue #$NUMBER** in \`$REPO\`
+**$TITLE**
+By: $SENDER
+$URL"
               elif [ "$ACTION" = "closed" ]; then
-                MSG="✅ **Issue #$NUMBER closed** in \`$REPO\`\n**$TITLE**\nBy: $SENDER"
+                MSG="✅ **Issue #$NUMBER closed** in \`$REPO\`
+**$TITLE** - By: $SENDER"
               elif [ "$ACTION" = "reopened" ]; then
-                MSG="🔄 **Issue #$NUMBER reopened** in \`$REPO\`\n**$TITLE**\nBy: $SENDER"
+                MSG="🔄 **Issue #$NUMBER reopened** in \`$REPO\`
+**$TITLE** - By: $SENDER"
               fi
               ;;
             
             issue_comment)
-              TITLE="${{ github.event.issue.title }}"
+              TITLE=$(echo '${{ github.event.issue.title }}' | head -c 100)
               NUMBER="${{ github.event.issue.number }}"
               URL="${{ github.event.comment.html_url }}"
               
-              MSG="💬 **Comment on #$NUMBER** in \`$REPO\`\n**$TITLE**\nBy: $SENDER\n$URL"
+              MSG="💬 **Comment on #$NUMBER** in \`$REPO\`
+**$TITLE**
+By: $SENDER
+$URL"
               ;;
             
             pull_request)
-              TITLE="${{ github.event.pull_request.title }}"
+              TITLE=$(echo '${{ github.event.pull_request.title }}' | head -c 100)
               NUMBER="${{ github.event.pull_request.number }}"
               URL="${{ github.event.pull_request.html_url }}"
               MERGED="${{ github.event.pull_request.merged }}"
               
               if [ "$ACTION" = "opened" ]; then
-                MSG="🔀 **New PR #$NUMBER** in \`$REPO\`\n**$TITLE**\nBy: $SENDER\n$URL"
+                MSG="🔀 **New PR #$NUMBER** in \`$REPO\`
+**$TITLE**
+By: $SENDER
+$URL"
               elif [ "$ACTION" = "closed" ]; then
                 if [ "$MERGED" = "true" ]; then
-                  MSG="🎉 **PR #$NUMBER merged** in \`$REPO\`\n**$TITLE**"
+                  MSG="🎉 **PR #$NUMBER merged** in \`$REPO\`
+**$TITLE**"
                 else
-                  MSG="❌ **PR #$NUMBER closed** (not merged) in \`$REPO\`\n**$TITLE**"
+                  MSG="❌ **PR #$NUMBER closed** in \`$REPO\`
+**$TITLE**"
                 fi
               fi
               ;;
             
             pull_request_review)
               NUMBER="${{ github.event.pull_request.number }}"
-              TITLE="${{ github.event.pull_request.title }}"
+              TITLE=$(echo '${{ github.event.pull_request.title }}' | head -c 100)
               STATE="${{ github.event.review.state }}"
               
               if [ "$STATE" = "approved" ]; then
@@ -76,25 +90,25 @@ jobs:
               else
                 EMOJI="💭"
               fi
-              MSG="$EMOJI **PR #$NUMBER review ($STATE)** in \`$REPO\`\n**$TITLE**\nBy: $SENDER"
+              MSG="$EMOJI **PR #$NUMBER review** ($STATE) in \`$REPO\`
+**$TITLE** - By: $SENDER"
               ;;
             
             release)
               TAG="${{ github.event.release.tag_name }}"
-              NAME="${{ github.event.release.name }}"
+              NAME=$(echo '${{ github.event.release.name }}' | head -c 100)
               URL="${{ github.event.release.html_url }}"
               
-              MSG="🚀 **Release $TAG** in \`$REPO\`\n**$NAME**\n$URL"
+              MSG="🚀 **Release $TAG** in \`$REPO\`
+**$NAME**
+$URL"
               ;;
           esac
           
-          # Escape for JSON
-          MSG=$(echo -e "$MSG" | jq -Rs .)
-          echo "message=$MSG" >> $GITHUB_OUTPUT
-      
-      - name: Send to Discord
-        if: steps.message.outputs.message != ''
-        run: |
-          curl -X POST "${{ secrets.DISCORD_WEBHOOK_URL }}" \
-            -H "Content-Type: application/json" \
-            -d "{\"content\": ${{ steps.message.outputs.message }}}"
+          if [ -n "$MSG" ]; then
+            # Use jq to properly escape the message for JSON
+            JSON=$(jq -n --arg content "$MSG" '{content: $content}')
+            curl -X POST "$DISCORD_WEBHOOK" \
+              -H "Content-Type: application/json" \
+              -d "$JSON"
+          fi
