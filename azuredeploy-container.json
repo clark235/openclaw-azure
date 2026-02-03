@@ -1,0 +1,219 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "description": "Deploy OpenCLAW to Azure Container Instance - Serverless AI Assistant",
+    "_generator": {
+      "name": "openclaw-azure",
+      "version": "1.0.0"
+    }
+  },
+  "parameters": {
+    "containerName": {
+      "type": "string",
+      "defaultValue": "openclaw",
+      "minLength": 1,
+      "maxLength": 63,
+      "metadata": {
+        "description": "Name for the container instance"
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Azure region for deployment"
+      }
+    },
+    "cpuCores": {
+      "type": "int",
+      "defaultValue": 1,
+      "allowedValues": [1, 2, 4],
+      "metadata": {
+        "description": "CPU cores (1 recommended for personal use)"
+      }
+    },
+    "memoryInGb": {
+      "type": "int",
+      "defaultValue": 2,
+      "allowedValues": [2, 4, 8],
+      "metadata": {
+        "description": "Memory in GB (2GB recommended for personal use)"
+      }
+    },
+    "anthropicApiKey": {
+      "type": "secureString",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Anthropic API key (can be configured later via Control UI)"
+      }
+    },
+    "openaiApiKey": {
+      "type": "secureString",
+      "defaultValue": "",
+      "metadata": {
+        "description": "OpenAI API key (optional)"
+      }
+    },
+    "discordToken": {
+      "type": "secureString",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Discord bot token (optional)"
+      }
+    },
+    "telegramToken": {
+      "type": "secureString",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Telegram bot token (optional)"
+      }
+    }
+  },
+  "variables": {
+    "imageUrl": "node:22-bookworm-slim",
+    "dnsLabel": "[concat('openclaw-', uniqueString(resourceGroup().id, parameters('containerName')))]",
+    "storageAccountName": "[concat('openclaw', uniqueString(resourceGroup().id))]",
+    "fileShareName": "openclaw-data",
+    "gatewayToken": "[concat(uniqueString(resourceGroup().id, parameters('containerName'), deployment().name), uniqueString(subscription().subscriptionId, parameters('containerName')))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2023-01-01",
+      "name": "[variables('storageAccountName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "kind": "StorageV2",
+      "properties": {
+        "minimumTlsVersion": "TLS1_2",
+        "allowBlobPublicAccess": false
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/fileServices/shares",
+      "apiVersion": "2023-01-01",
+      "name": "[concat(variables('storageAccountName'), '/default/', variables('fileShareName'))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+      ],
+      "properties": {
+        "shareQuota": 5
+      }
+    },
+    {
+      "type": "Microsoft.ContainerInstance/containerGroups",
+      "apiVersion": "2023-05-01",
+      "name": "[parameters('containerName')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts/fileServices/shares', variables('storageAccountName'), 'default', variables('fileShareName'))]"
+      ],
+      "properties": {
+        "containers": [
+          {
+            "name": "[parameters('containerName')]",
+            "properties": {
+              "image": "[variables('imageUrl')]",
+              "command": [
+                "/bin/sh",
+                "-c",
+                "[concat('echo \"Installing OpenCLAW...\" && npm install -g clawdbot && mkdir -p /data/.clawdbot /data/clawd && cat > /data/.clawdbot/clawdbot.json << ''EOF''\n{\"gateway\":{\"mode\":\"local\",\"port\":18789,\"bind\":\"lan\",\"auth\":{\"mode\":\"token\",\"token\":\"', variables('gatewayToken'), '\"}},\"agents\":{\"defaults\":{\"workspace\":\"/data/clawd\"}}}\nEOF\necho \"Starting OpenCLAW Gateway...\" && clawdbot gateway')]"
+              ],
+              "ports": [
+                {
+                  "port": 18789,
+                  "protocol": "TCP"
+                }
+              ],
+              "environmentVariables": [
+                {
+                  "name": "NODE_ENV",
+                  "value": "production"
+                },
+                {
+                  "name": "CLAWDBOT_STATE_DIR",
+                  "value": "/data/.clawdbot"
+                },
+                {
+                  "name": "CLAWDBOT_WORKSPACE",
+                  "value": "/data/clawd"
+                },
+                {
+                  "name": "ANTHROPIC_API_KEY",
+                  "secureValue": "[parameters('anthropicApiKey')]"
+                },
+                {
+                  "name": "OPENAI_API_KEY",
+                  "secureValue": "[parameters('openaiApiKey')]"
+                },
+                {
+                  "name": "DISCORD_TOKEN",
+                  "secureValue": "[parameters('discordToken')]"
+                },
+                {
+                  "name": "TELEGRAM_TOKEN",
+                  "secureValue": "[parameters('telegramToken')]"
+                }
+              ],
+              "resources": {
+                "requests": {
+                  "cpu": "[parameters('cpuCores')]",
+                  "memoryInGB": "[parameters('memoryInGb')]"
+                }
+              },
+              "volumeMounts": [
+                {
+                  "name": "data",
+                  "mountPath": "/data"
+                }
+              ]
+            }
+          }
+        ],
+        "osType": "Linux",
+        "restartPolicy": "Always",
+        "ipAddress": {
+          "type": "Public",
+          "ports": [
+            {
+              "port": 18789,
+              "protocol": "TCP"
+            }
+          ],
+          "dnsNameLabel": "[variables('dnsLabel')]"
+        },
+        "volumes": [
+          {
+            "name": "data",
+            "azureFile": {
+              "shareName": "[variables('fileShareName')]",
+              "storageAccountName": "[variables('storageAccountName')]",
+              "storageAccountKey": "[listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2023-01-01').keys[0].value]"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "outputs": {
+    "containerFqdn": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.ContainerInstance/containerGroups', parameters('containerName'))).ipAddress.fqdn]"
+    },
+    "containerIp": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.ContainerInstance/containerGroups', parameters('containerName'))).ipAddress.ip]"
+    },
+    "controlUIUrl": {
+      "type": "string",
+      "value": "[concat('http://', reference(resourceId('Microsoft.ContainerInstance/containerGroups', parameters('containerName'))).ipAddress.fqdn, ':18789')]"
+    },
+    "gatewayToken": {
+      "type": "string",
+      "value": "[variables('gatewayToken')]"
+    }
+  }
+}

@@ -1,27 +1,53 @@
 # OpenCLAW Azure Deployment
 
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fclark235%2Fopenclaw-azure%2Fmain%2Fazuredeploy.json)
-
 One-click deployment of [OpenCLAW](https://github.com/clawdbot/clawdbot) to Azure.
+
+## Deployment Options
+
+### Option 1: Virtual Machine (Recommended)
+
+Full VM with SSH access, persistent storage, and auto-start on boot.
+
+[![Deploy VM to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fclark235%2Fopenclaw-azure%2Fmain%2Fazuredeploy.json)
+
+**Best for:** Personal use, development, full control
+
+| Size | vCPU | RAM | Monthly Cost* |
+|------|------|-----|--------------|
+| Standard_B1ms | 1 | 2 GB | ~$15 |
+| Standard_B2s | 2 | 4 GB | ~$30 |
+
+### Option 2: Container Instance (Serverless)
+
+Serverless container - no VM to manage, pay only for what you use.
+
+[![Deploy Container to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fclark235%2Fopenclaw-azure%2Fmain%2Fazuredeploy-container.json)
+
+**Best for:** Quick testing, serverless preference, minimal management
+
+| Config | vCPU | RAM | Monthly Cost* |
+|--------|------|-----|--------------|
+| Default | 1 | 2 GB | ~$35-45 |
+| Medium | 2 | 4 GB | ~$70-90 |
+
+*Costs vary by region. VM includes ~$1-2/mo storage.
+
+---
 
 ## What is OpenCLAW?
 
-OpenCLAW is an open-source AI assistant that runs on your own infrastructure. It can connect to Discord, Telegram, WhatsApp, and more. Think of it as your personal AI that lives in your cloud.
+OpenCLAW is an open-source AI assistant that runs on your own infrastructure.
 
 - 🤖 AI-powered assistant using Claude, GPT, or other models
 - 💬 Multi-channel: Discord, Telegram, WhatsApp, Signal, Slack
 - 🔧 Extensible with skills and plugins
 - 🔒 Self-hosted: your data stays on your server
 
-## Quick Deploy
+---
 
-### Option 1: One-Click Deploy (Recommended)
+## Quick Start
 
-Click the button above, or:
-
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fclark235%2Fopenclaw-azure%2Fmain%2Fazuredeploy.json)
-
-### Option 2: Azure CLI
+### VM Deployment (CLI)
 
 ```bash
 # Clone this repo
@@ -31,63 +57,55 @@ cd openclaw-azure
 # Create resource group
 az group create --name openclaw-rg --location eastus
 
-# Deploy (SSH key auth)
+# Deploy VM
 az deployment group create \
   --resource-group openclaw-rg \
   --template-file azuredeploy.json \
   --parameters adminPasswordOrKey="$(cat ~/.ssh/id_ed25519.pub)"
 ```
 
-### Option 3: Bicep
+### Container Deployment (CLI)
 
 ```bash
+# Deploy container (API keys optional - can configure later)
 az deployment group create \
   --resource-group openclaw-rg \
-  --template-file main.bicep \
-  --parameters adminPasswordOrKey="$(cat ~/.ssh/id_ed25519.pub)"
+  --template-file azuredeploy-container.json
 ```
 
-## Parameters
+---
+
+## VM Parameters
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `vmName` | `openclaw` | VM name |
 | `location` | Resource group location | Azure region |
-| `vmSize` | `Standard_B1ms` | VM size (see sizing below) |
+| `vmSize` | `Standard_B1ms` | VM size |
 | `adminUsername` | `clawdadmin` | SSH username |
 | `authenticationType` | `sshPublicKey` | `sshPublicKey` or `password` |
 | `adminPasswordOrKey` | *required* | SSH public key or password |
-| `osDiskSizeGB` | `30` | OS disk size (30-256 GB) |
 
-## VM Sizing Guide
+## Container Parameters
 
-| Size | vCPU | RAM | Monthly Cost* | Use Case |
-|------|------|-----|--------------|----------|
-| Standard_B1ls | 1 | 0.5 GB | ~$4 | Minimal (testing only) |
-| Standard_B1s | 1 | 1 GB | ~$8 | Light use |
-| **Standard_B1ms** | **1** | **2 GB** | **~$15** | **Recommended for personal use** |
-| Standard_B2s | 2 | 4 GB | ~$30 | Multi-user / heavy workloads |
-| Standard_B2ms | 2 | 8 GB | ~$60 | Power users |
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `containerName` | `openclaw` | Container name |
+| `location` | Resource group location | Azure region |
+| `cpuCores` | `1` | CPU cores (1, 2, or 4) |
+| `memoryInGb` | `2` | Memory in GB (2, 4, or 8) |
+| `anthropicApiKey` | *optional* | Anthropic API key |
+| `discordToken` | *optional* | Discord bot token |
 
-*Costs are estimates and vary by region. Add ~$1-2/mo for storage.
-
-## Deployment Outputs
-
-After deployment completes, you'll receive:
-
-| Output | Description |
-|--------|-------------|
-| `publicIPAddress` | VM's public IP |
-| `fqdn` | DNS hostname |
-| `sshCommand` | SSH command to connect |
-| `controlUIUrl` | OpenCLAW Control UI URL |
-| `gatewayToken` | Auth token for Control UI |
+---
 
 ## Post-Deployment Setup
 
 ### 1. Access the Control UI
 
-Open the `controlUIUrl` from deployment outputs (e.g., `http://openclaw-xxxxx.eastus.cloudapp.azure.com:18789`)
+After deployment completes, open the `controlUIUrl` from outputs:
+- VM: `http://openclaw-xxxxx.eastus.cloudapp.azure.com:18789`
+- Container: `http://openclaw-xxxxx.eastus.azurecontainer.io:18789`
 
 ### 2. Enter Gateway Token
 
@@ -96,94 +114,118 @@ Use the `gatewayToken` from deployment outputs to authenticate.
 ### 3. Configure API Keys
 
 In the Control UI, add your AI provider API keys:
-- **Anthropic**: Get key from [console.anthropic.com](https://console.anthropic.com)
-- **OpenAI**: Get key from [platform.openai.com](https://platform.openai.com)
+- **Anthropic**: [console.anthropic.com](https://console.anthropic.com)
+- **OpenAI**: [platform.openai.com](https://platform.openai.com)
 
 ### 4. Add Channels (Optional)
 
-Connect messaging platforms:
 - **Discord**: Create bot at [discord.com/developers](https://discord.com/developers)
 - **Telegram**: Create bot via [@BotFather](https://t.me/botfather)
 - **WhatsApp**: Scan QR code in Control UI
 
-## SSH Access
+---
+
+## VM Management
 
 ```bash
-# Connect to your VM
+# SSH into VM
 ssh clawdadmin@<your-fqdn>
 
 # View setup info
 cat ~/OPENCLAW_INFO.txt
 
-# Check service status
+# Check service
 sudo systemctl status openclaw
 
 # View logs
 sudo journalctl -u openclaw -f
 
-# Restart service
+# Restart
 sudo systemctl restart openclaw
-```
 
-## Updating OpenCLAW
-
-SSH into your VM and run:
-
-```bash
+# Update OpenCLAW
 sudo npm install -g clawdbot@latest
 sudo systemctl restart openclaw
 ```
 
-## Security Recommendations
+---
 
-1. **Restrict SSH access**: Update NSG to allow SSH only from your IP
-2. **Use SSH keys**: Avoid password authentication
-3. **Enable Tailscale**: For private access without exposing ports
-4. **Regular updates**: Keep OpenCLAW and system packages updated
+## Container Management
 
 ```bash
-# Restrict SSH to your IP
-az network nsg rule update \
-  --resource-group openclaw-rg \
-  --nsg-name openclaw-nsg \
-  --name SSH \
-  --source-address-prefix "YOUR_IP/32"
+# View container logs
+az container logs --resource-group openclaw-rg --name openclaw
+
+# Restart container
+az container restart --resource-group openclaw-rg --name openclaw
+
+# Delete and redeploy to update
+az container delete --resource-group openclaw-rg --name openclaw --yes
+az deployment group create --resource-group openclaw-rg --template-file azuredeploy-container.json
 ```
+
+---
+
+## VM vs Container: Which to Choose?
+
+| Feature | VM | Container |
+|---------|----|-----------| 
+| **SSH Access** | ✅ Yes | ❌ No |
+| **Persistent Storage** | ✅ Full disk | ✅ Azure Files |
+| **Auto-restart** | ✅ systemd | ✅ Always restart |
+| **Management** | More control | Less maintenance |
+| **Cost (2GB)** | ~$15/mo | ~$35-45/mo |
+| **Boot Time** | ~2-3 min | ~3-5 min |
+| **Best For** | Production, dev | Testing, serverless |
+
+**Recommendation:** Use **VM** for production/daily use (cheaper, more control). Use **Container** for quick testing or if you prefer serverless.
+
+---
 
 ## Troubleshooting
 
 ### Gateway not accessible
 
-1. Check if service is running: `sudo systemctl status openclaw`
-2. Check logs: `sudo journalctl -u openclaw -n 50`
-3. Verify NSG rules allow port 18789
-4. Wait 2-3 minutes after deployment for setup to complete
+1. Wait 3-5 minutes after deployment for setup to complete
+2. Check deployment outputs for correct URL
+3. Verify NSG/firewall allows port 18789
 
-### Setup script failed
+### VM: Check service status
 
-Check the setup log:
 ```bash
+ssh clawdadmin@<fqdn>
+sudo systemctl status openclaw
+sudo journalctl -u openclaw -n 50
 sudo cat /var/log/openclaw-setup.log
 ```
 
-### VM extension still running
+### Container: Check logs
 
-The CustomScript extension can take 3-5 minutes. Check status:
 ```bash
-az vm extension show \
-  --resource-group openclaw-rg \
-  --vm-name openclaw \
-  --name OpenCLAWSetup \
-  --query provisioningState
+az container logs --resource-group openclaw-rg --name openclaw --follow
 ```
+
+---
 
 ## Files
 
 | File | Description |
 |------|-------------|
-| `azuredeploy.json` | ARM template (for Deploy button) |
-| `main.bicep` | Bicep template (cleaner syntax) |
-| `azuredeploy.parameters.json` | Example parameters file |
+| `azuredeploy.json` | VM ARM template |
+| `azuredeploy-container.json` | Container ARM template |
+| `main.bicep` | VM Bicep template |
+| `container.bicep` | Container Bicep template |
+
+---
+
+## Security Recommendations
+
+1. **Restrict access**: Update NSG to allow only your IP
+2. **Use SSH keys**: For VM, avoid password authentication  
+3. **Enable Tailscale**: For private access without exposing ports
+4. **Regular updates**: Keep OpenCLAW updated
+
+---
 
 ## Resources
 
