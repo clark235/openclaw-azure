@@ -1,5 +1,5 @@
 // OpenCLAW Azure Deployment
-// Deploy Clawdbot AI Assistant to Azure VM
+// Deploy OpenCLAW (Self-hosted AI Assistant) to Azure VM
 // https://github.com/clark235/openclaw-azure
 
 @description('Name for the virtual machine')
@@ -75,9 +75,9 @@ curl -fsSL https://deb.nodesource.com/setup_22.x | bash - >> /var/log/openclaw-s
 apt-get install -y nodejs >> /var/log/openclaw-setup.log 2>&1
 echo "[$(date)] Node.js installed: $(node --version)" | tee -a /var/log/openclaw-setup.log
 
-# Install Clawdbot
+# Install OpenCLAW
 npm install -g clawdbot >> /var/log/openclaw-setup.log 2>&1
-echo "[$(date)] Clawdbot installed: $(clawdbot --version)" | tee -a /var/log/openclaw-setup.log
+echo "[$(date)] OpenCLAW installed: $(clawdbot --version)" | tee -a /var/log/openclaw-setup.log
 
 # Create directories
 mkdir -p /home/${adminUsername}/clawd
@@ -104,9 +104,9 @@ cat > /home/${adminUsername}/.clawdbot/clawdbot.json << 'CONFIGEOF'
 CONFIGEOF
 
 # Create systemd service
-cat > /etc/systemd/system/clawdbot.service << 'SERVICEEOF'
+cat > /etc/systemd/system/openclaw.service << 'SERVICEEOF'
 [Unit]
-Description=OpenCLAW Gateway (Clawdbot)
+Description=OpenCLAW Gateway
 After=network.target
 Wants=network-online.target
 
@@ -132,8 +132,8 @@ chmod 600 /home/${adminUsername}/.clawdbot/clawdbot.json
 
 # Enable and start service
 systemctl daemon-reload
-systemctl enable clawdbot
-systemctl start clawdbot
+systemctl enable openclaw
+systemctl start openclaw
 
 # Create info file
 PUBLIC_IP=$(curl -s ifconfig.me)
@@ -148,13 +148,13 @@ Gateway Token: ${gatewayToken}
 SSH: ssh ${adminUsername}@$(hostname -f)
 
 Service Commands:
-  sudo systemctl status clawdbot
-  sudo systemctl restart clawdbot
-  sudo journalctl -u clawdbot -f
+  sudo systemctl status openclaw
+  sudo systemctl restart openclaw
+  sudo journalctl -u openclaw -f
 
-Update Clawdbot:
+Update OpenCLAW:
   sudo npm install -g clawdbot@latest
-  sudo systemctl restart clawdbot
+  sudo systemctl restart openclaw
 
 Docs: https://docs.clawd.bot
 =====================================

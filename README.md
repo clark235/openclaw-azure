@@ -2,11 +2,11 @@
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fclark235%2Fopenclaw-azure%2Fmain%2Fazuredeploy.json)
 
-One-click deployment of [OpenCLAW](https://github.com/clawdbot/clawdbot) (Clawdbot AI Assistant) to Azure.
+One-click deployment of [OpenCLAW](https://github.com/clawdbot/clawdbot) to Azure.
 
 ## What is OpenCLAW?
 
-OpenCLAW (Clawdbot) is an AI assistant that runs on your own infrastructure. It can connect to Discord, Telegram, WhatsApp, and more. Think of it as your personal AI that lives in your cloud.
+OpenCLAW is an open-source AI assistant that runs on your own infrastructure. It can connect to Discord, Telegram, WhatsApp, and more. Think of it as your personal AI that lives in your cloud.
 
 - 🤖 AI-powered assistant using Claude, GPT, or other models
 - 💬 Multi-channel: Discord, Telegram, WhatsApp, Signal, Slack
@@ -80,7 +80,7 @@ After deployment completes, you'll receive:
 | `publicIPAddress` | VM's public IP |
 | `fqdn` | DNS hostname |
 | `sshCommand` | SSH command to connect |
-| `controlUIUrl` | Clawdbot Control UI URL |
+| `controlUIUrl` | OpenCLAW Control UI URL |
 | `gatewayToken` | Auth token for Control UI |
 
 ## Post-Deployment Setup
@@ -116,22 +116,22 @@ ssh clawdadmin@<your-fqdn>
 cat ~/OPENCLAW_INFO.txt
 
 # Check service status
-sudo systemctl status clawdbot
+sudo systemctl status openclaw
 
 # View logs
-sudo journalctl -u clawdbot -f
+sudo journalctl -u openclaw -f
 
 # Restart service
-sudo systemctl restart clawdbot
+sudo systemctl restart openclaw
 ```
 
-## Updating Clawdbot
+## Updating OpenCLAW
 
 SSH into your VM and run:
 
 ```bash
 sudo npm install -g clawdbot@latest
-sudo systemctl restart clawdbot
+sudo systemctl restart openclaw
 ```
 
 ## Security Recommendations
@@ -139,7 +139,7 @@ sudo systemctl restart clawdbot
 1. **Restrict SSH access**: Update NSG to allow SSH only from your IP
 2. **Use SSH keys**: Avoid password authentication
 3. **Enable Tailscale**: For private access without exposing ports
-4. **Regular updates**: Keep Clawdbot and system packages updated
+4. **Regular updates**: Keep OpenCLAW and system packages updated
 
 ```bash
 # Restrict SSH to your IP
@@ -154,8 +154,8 @@ az network nsg rule update \
 
 ### Gateway not accessible
 
-1. Check if service is running: `sudo systemctl status clawdbot`
-2. Check logs: `sudo journalctl -u clawdbot -n 50`
+1. Check if service is running: `sudo systemctl status openclaw`
+2. Check logs: `sudo journalctl -u openclaw -n 50`
 3. Verify NSG rules allow port 18789
 4. Wait 2-3 minutes after deployment for setup to complete
 
@@ -187,9 +187,9 @@ az vm extension show \
 
 ## Resources
 
-- [Clawdbot Documentation](https://docs.clawd.bot)
-- [Clawdbot GitHub](https://github.com/clawdbot/clawdbot)
-- [Clawdbot Discord](https://discord.com/invite/clawd)
+- [OpenCLAW Documentation](https://docs.clawd.bot)
+- [OpenCLAW GitHub](https://github.com/clawdbot/clawdbot)
+- [OpenCLAW Discord](https://discord.com/invite/clawd)
 
 ## License
 
