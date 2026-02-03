@@ -1,0 +1,21 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "vmName": {
+      "value": "openclaw"
+    },
+    "vmSize": {
+      "value": "Standard_B1ms"
+    },
+    "adminUsername": {
+      "value": "clawdadmin"
+    },
+    "authenticationType": {
+      "value": "sshPublicKey"
+    },
+    "adminPasswordOrKey": {
+      "value": "ssh-ed25519 YOUR_SSH_PUBLIC_KEY_HERE"
+    }
+  }
+}

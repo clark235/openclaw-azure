@@ -1,0 +1,287 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "description": "Deploy OpenCLAW (Clawdbot AI Assistant) to Azure VM",
+    "_generator": {
+      "name": "openclaw-azure",
+      "version": "1.0.0"
+    }
+  },
+  "parameters": {
+    "vmName": {
+      "type": "string",
+      "defaultValue": "openclaw",
+      "minLength": 1,
+      "maxLength": 64,
+      "metadata": {
+        "description": "Name for the virtual machine"
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Azure region for deployment"
+      }
+    },
+    "vmSize": {
+      "type": "string",
+      "defaultValue": "Standard_B1ms",
+      "allowedValues": [
+        "Standard_B1ls",
+        "Standard_B1s",
+        "Standard_B1ms",
+        "Standard_B2s",
+        "Standard_B2ms",
+        "Standard_B2als_v2",
+        "Standard_B2as_v2",
+        "Standard_D2s_v3",
+        "Standard_D2as_v4"
+      ],
+      "metadata": {
+        "description": "VM size - B1ms (2GB RAM) recommended for personal use"
+      }
+    },
+    "adminUsername": {
+      "type": "string",
+      "defaultValue": "clawdadmin",
+      "metadata": {
+        "description": "Admin username for SSH access"
+      }
+    },
+    "authenticationType": {
+      "type": "string",
+      "defaultValue": "sshPublicKey",
+      "allowedValues": [
+        "sshPublicKey",
+        "password"
+      ],
+      "metadata": {
+        "description": "Authentication type - SSH key recommended"
+      }
+    },
+    "adminPasswordOrKey": {
+      "type": "secureString",
+      "metadata": {
+        "description": "SSH public key or password"
+      }
+    },
+    "osDiskSizeGB": {
+      "type": "int",
+      "defaultValue": 30,
+      "minValue": 30,
+      "maxValue": 256,
+      "metadata": {
+        "description": "OS disk size in GB"
+      }
+    }
+  },
+  "variables": {
+    "vnetName": "[concat(parameters('vmName'), '-vnet')]",
+    "subnetName": "default",
+    "nsgName": "[concat(parameters('vmName'), '-nsg')]",
+    "publicIpName": "[concat(parameters('vmName'), '-pip')]",
+    "nicName": "[concat(parameters('vmName'), '-nic')]",
+    "dnsLabel": "[concat('openclaw-', uniqueString(resourceGroup().id, parameters('vmName')))]",
+    "gatewayToken": "[concat(uniqueString(resourceGroup().id, parameters('vmName'), deployment().name), uniqueString(subscription().subscriptionId, parameters('vmName'), parameters('adminUsername')))]",
+    "linuxConfiguration": {
+      "disablePasswordAuthentication": true,
+      "ssh": {
+        "publicKeys": [
+          {
+            "path": "[concat('/home/', parameters('adminUsername'), '/.ssh/authorized_keys')]",
+            "keyData": "[parameters('adminPasswordOrKey')]"
+          }
+        ]
+      }
+    },
+    "setupScript": "[base64(concat('#!/bin/bash\nset -e\nexport DEBIAN_FRONTEND=noninteractive\necho \"[$(date)] Starting OpenCLAW setup...\" | tee /var/log/openclaw-setup.log\ncurl -fsSL https://deb.nodesource.com/setup_22.x | bash - >> /var/log/openclaw-setup.log 2>&1\napt-get install -y nodejs >> /var/log/openclaw-setup.log 2>&1\necho \"[$(date)] Node.js installed: $(node --version)\" | tee -a /var/log/openclaw-setup.log\nnpm install -g clawdbot >> /var/log/openclaw-setup.log 2>&1\necho \"[$(date)] Clawdbot installed: $(clawdbot --version)\" | tee -a /var/log/openclaw-setup.log\nmkdir -p /home/', parameters('adminUsername'), '/clawd\nmkdir -p /home/', parameters('adminUsername'), '/.clawdbot\ncat > /home/', parameters('adminUsername'), '/.clawdbot/clawdbot.json << ''CONFIGEOF''\n{\n  \"gateway\": {\n    \"mode\": \"local\",\n    \"port\": 18789,\n    \"bind\": \"lan\",\n    \"auth\": {\n      \"mode\": \"token\",\n      \"token\": \"', variables('gatewayToken'), '\"\n    }\n  },\n  \"agents\": {\n    \"defaults\": {\n      \"workspace\": \"/home/', parameters('adminUsername'), '/clawd\"\n    }\n  }\n}\nCONFIGEOF\ncat > /etc/systemd/system/clawdbot.service << ''SERVICEEOF''\n[Unit]\nDescription=OpenCLAW Gateway (Clawdbot)\nAfter=network.target\nWants=network-online.target\n\n[Service]\nType=simple\nUser=', parameters('adminUsername'), '\nWorkingDirectory=/home/', parameters('adminUsername'), '/clawd\nEnvironment=NODE_ENV=production\nExecStart=/usr/bin/clawdbot gateway\nRestart=always\nRestartSec=10\nStandardOutput=journal\nStandardError=journal\n\n[Install]\nWantedBy=multi-user.target\nSERVICEEOF\nchown -R ', parameters('adminUsername'), ':', parameters('adminUsername'), ' /home/', parameters('adminUsername'), '/clawd\nchown -R ', parameters('adminUsername'), ':', parameters('adminUsername'), ' /home/', parameters('adminUsername'), '/.clawdbot\nchmod 600 /home/', parameters('adminUsername'), '/.clawdbot/clawdbot.json\nsystemctl daemon-reload\nsystemctl enable clawdbot\nsystemctl start clawdbot\ncat > /home/', parameters('adminUsername'), '/OPENCLAW_INFO.txt << EOF\n=====================================\n  OpenCLAW Deployment Complete!\n=====================================\n\nControl UI: http://$(curl -s ifconfig.me):18789\nGateway Token: ', variables('gatewayToken'), '\n\nSSH: ssh ', parameters('adminUsername'), '@$(hostname -f)\n\nService Commands:\n  sudo systemctl status clawdbot\n  sudo systemctl restart clawdbot\n  sudo journalctl -u clawdbot -f\n\nUpdate Clawdbot:\n  sudo npm install -g clawdbot@latest\n  sudo systemctl restart clawdbot\n\nDocs: https://docs.clawd.bot\n=====================================\nEOF\nchown ', parameters('adminUsername'), ':', parameters('adminUsername'), ' /home/', parameters('adminUsername'), '/OPENCLAW_INFO.txt\necho \"[$(date)] OpenCLAW setup complete!\" | tee -a /var/log/openclaw-setup.log\n'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "apiVersion": "2023-05-01",
+      "name": "[variables('nsgName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "SSH",
+            "properties": {
+              "priority": 1000,
+              "direction": "Inbound",
+              "access": "Allow",
+              "protocol": "TCP",
+              "sourcePortRange": "*",
+              "destinationPortRange": "22",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*"
+            }
+          },
+          {
+            "name": "OpenCLAW-Gateway",
+            "properties": {
+              "priority": 1010,
+              "direction": "Inbound",
+              "access": "Allow",
+              "protocol": "TCP",
+              "sourcePortRange": "*",
+              "destinationPortRange": "18789",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "apiVersion": "2023-05-01",
+      "name": "[variables('publicIpName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "Standard"
+      },
+      "properties": {
+        "publicIPAllocationMethod": "Static",
+        "dnsSettings": {
+          "domainNameLabel": "[variables('dnsLabel')]"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "2023-05-01",
+      "name": "[variables('vnetName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "10.0.0.0/16"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[variables('subnetName')]",
+            "properties": {
+              "addressPrefix": "10.0.0.0/24"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "2023-05-01",
+      "name": "[variables('nicName')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName'))]",
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]",
+        "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName'))]"
+              },
+              "subnet": {
+                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), variables('subnetName'))]"
+              }
+            }
+          }
+        ],
+        "networkSecurityGroup": {
+          "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "apiVersion": "2023-07-01",
+      "name": "[parameters('vmName')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]"
+      ],
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[parameters('vmSize')]"
+        },
+        "osProfile": {
+          "computerName": "[parameters('vmName')]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "adminPassword": "[if(equals(parameters('authenticationType'), 'password'), parameters('adminPasswordOrKey'), null())]",
+          "linuxConfiguration": "[if(equals(parameters('authenticationType'), 'sshPublicKey'), variables('linuxConfiguration'), null())]"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "Canonical",
+            "offer": "ubuntu-24_04-lts",
+            "sku": "server",
+            "version": "latest"
+          },
+          "osDisk": {
+            "createOption": "FromImage",
+            "diskSizeGB": "[parameters('osDiskSizeGB')]",
+            "managedDisk": {
+              "storageAccountType": "Standard_LRS"
+            }
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines/extensions",
+      "apiVersion": "2023-07-01",
+      "name": "[concat(parameters('vmName'), '/OpenCLAWSetup')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Compute/virtualMachines', parameters('vmName'))]"
+      ],
+      "properties": {
+        "publisher": "Microsoft.Azure.Extensions",
+        "type": "CustomScript",
+        "typeHandlerVersion": "2.1",
+        "autoUpgradeMinorVersion": true,
+        "protectedSettings": {
+          "script": "[variables('setupScript')]"
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "publicIPAddress": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName'))).ipAddress]"
+    },
+    "fqdn": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName'))).dnsSettings.fqdn]"
+    },
+    "sshCommand": {
+      "type": "string",
+      "value": "[concat('ssh ', parameters('adminUsername'), '@', reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName'))).dnsSettings.fqdn)]"
+    },
+    "controlUIUrl": {
+      "type": "string",
+      "value": "[concat('http://', reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName'))).dnsSettings.fqdn, ':18789')]"
+    },
+    "gatewayToken": {
+      "type": "string",
+      "value": "[variables('gatewayToken')]"
+    }
+  }
+}
