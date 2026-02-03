@@ -1,0 +1,23 @@
+{
+  "$schema": "../schemas/preset.schema.json",
+  "name": "signal-private",
+  "description": "Signal messenger with Venice AI - Maximum privacy",
+  "difficulty": "hard",
+  "monthlyCost": "$16 infra + ~$10-30 AI",
+  "config": {
+    "aiProvider": "venice",
+    "aiModel": "venice/llama-3.3-70b",
+    "channel": "signal"
+  },
+  "required": [
+    { "key": "aiApiKey", "env": "VENICE_API_KEY", "description": "Venice AI API key" },
+    { "key": "signalPhone", "env": "SIGNAL_PHONE", "description": "Phone number for Signal (+1234567890)" }
+  ],
+  "setup": [
+    "1. Get API key: https://venice.ai/settings (privacy-focused, no logs)",
+    "2. Install signal-cli on the VM",
+    "3. Register/link phone number with signal-cli",
+    "4. Configure Clawdbot signal channel"
+  ],
+  "notes": "Signal setup requires manual configuration after VM deployment"
+}

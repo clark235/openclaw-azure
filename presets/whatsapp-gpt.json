@@ -1,0 +1,23 @@
+{
+  "$schema": "../schemas/preset.schema.json",
+  "name": "whatsapp-gpt",
+  "description": "WhatsApp bot with GPT-4o - Great for family & friends",
+  "difficulty": "medium",
+  "monthlyCost": "$16 infra + ~$10-50 AI",
+  "config": {
+    "aiProvider": "openai",
+    "aiModel": "openai/gpt-4o",
+    "channel": "whatsapp"
+  },
+  "required": [
+    { "key": "aiApiKey", "env": "OPENAI_API_KEY", "description": "OpenAI API key" }
+  ],
+  "setup": [
+    "1. Get API key: https://platform.openai.com",
+    "2. After deployment, SSH to VM",
+    "3. Run: clawdbot channels login",
+    "4. Scan QR code with WhatsApp on your phone",
+    "5. Note: Phone must stay connected to internet"
+  ],
+  "notes": "WhatsApp requires post-deployment QR scan. Cannot be fully automated."
+}

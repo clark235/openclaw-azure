@@ -1,186 +1,210 @@
-# OpenCLAW Azure Deployment
+# OpenClaw Azure Deployment
 
-One-click deployment of [OpenCLAW](https://github.com/clawdbot/clawdbot) - your self-hosted AI assistant.
+One-click deployment of [OpenClaw](https://github.com/clawdbot/clawdbot) - your self-hosted AI assistant.
 
-## 🚀 Ultimate Deployment (Recommended)
+**🚀 Deploy 10 bots in 10 minutes** — presets, CLI tools, and multi-instance support.
 
-**Choose your AI provider + messaging channel - fully configured in one click!**
+---
 
-[![Deploy Ultimate](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fclark235%2Fopenclaw-azure%2Fmain%2Fvm%2Fazuredeploy-ultimate.json)
+## Quick Start
 
-### Supported AI Providers
+### Option 1: One-Click Azure Deploy
+
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fclark235%2Fopenclaw-azure%2Fmain%2Fvm%2Fazuredeploy-ultimate.json)
+
+### Option 2: Interactive CLI
+
+```bash
+git clone https://github.com/clark235/openclaw-azure.git
+cd openclaw-azure
+./scripts/quick-deploy.sh
+```
+
+### Option 3: Script Deployment
+
+```bash
+# Single bot
+export ANTHROPIC_API_KEY="sk-ant-..."
+export TELEGRAM_TOKEN="123:ABC..."
+./scripts/deploy.sh --preset telegram-claude --name mybot
+
+# 5 bots at once
+./scripts/deploy.sh --preset telegram-claude --name support --count 5
+
+# From config file (10 different bots)
+./scripts/deploy.sh --config examples/multi-bot-config.json
+```
+
+---
+
+## 🎯 Presets (Ready-to-Deploy Configs)
+
+| Preset | AI Provider | Channel | Difficulty | Use Case |
+|--------|-------------|---------|------------|----------|
+| `telegram-claude` | Anthropic Claude | Telegram | Easy | Best for beginners |
+| `telegram-free` | Groq (FREE) | Telegram | Easy | Zero AI cost |
+| `discord-gpt4` | OpenAI GPT-4o | Discord | Medium | Gaming communities |
+| `discord-coder` | Claude Opus | Discord | Medium | Dev teams |
+| `slack-opus` | Claude Opus | Slack | Medium | Team workspaces |
+| `whatsapp-gpt` | OpenAI GPT-4o | WhatsApp | Medium | Family/friends |
+| `signal-private` | Venice AI | Signal | Hard | Privacy-focused |
+| `teams-enterprise` | Azure OpenAI | MS Teams | Hard | Enterprise |
+
+List all presets:
+```bash
+./scripts/deploy.sh --list-presets
+```
+
+---
+
+## 🤖 Supported AI Providers
 
 | Provider | Models | Best For |
 |----------|--------|----------|
 | **Anthropic** ⭐ | Claude Opus, Sonnet, Haiku | Best reasoning |
 | **OpenAI** | GPT-4o, GPT-4, o1 | General purpose |
-| **Azure OpenAI** | GPT-4o (your Azure) | Enterprise / Azure credits |
+| **Azure OpenAI** | GPT-4o (your Azure) | Enterprise |
+| **Groq** | Llama 3.3 70B | Free tier + fastest |
 | **OpenRouter** | 100+ models | Flexibility |
 | **Google** | Gemini Pro, Flash | Free tier |
-| **Groq** | Llama 3.3 70B | Fastest inference |
-| **Mistral** | Mistral Large | European alternative |
+| **Mistral** | Mistral Large | EU alternative |
 | **xAI** | Grok-3 | Latest tech |
+| **Venice** | Llama + Claude | Privacy-focused |
+| **DeepSeek** | DeepSeek Coder | Coding tasks |
 
-### Messaging Channels
-
-| Channel | Setup Time | Difficulty |
-|---------|-----------|------------|
-| **Telegram** ⭐ | 2 min | Easy |
-| **Discord** | 5 min | Medium |
-| None | - | Configure later |
-
-**Result:** Deploy → 5 min → Your AI is live and chatting! 🎉
+[Full provider catalog →](./CATALOG.md#-ai-providers)
 
 ---
 
-## Deployment Options
+## 💬 Supported Channels
 
-| Template | AI Provider | Messaging | Use Case |
-|----------|-------------|-----------|----------|
-| [**Ultimate**](./vm/) ⭐ | ✅ Choose from 8 | ✅ Pre-configured | Production ready |
-| [Quick Start](./vm/) | ❌ Add later | ✅ Pre-configured | Just messaging |
-| [Basic VM](./vm/) | ❌ Add later | ❌ Add later | Full control |
-| [Container](./container/) | ❌ Add later | ❌ Add later | Serverless |
+### Built-in (17 channels!)
 
----
+| Channel | Setup Time | Notes |
+|---------|-----------|-------|
+| **Telegram** ⭐ | 2 min | Easiest to start |
+| **Discord** | 5 min | Servers + DMs |
+| **WhatsApp** | 5 min | QR code pairing |
+| **Slack** | 10 min | Workspace apps |
+| **Signal** | 15 min | Privacy-focused |
+| **iMessage** | 10 min | macOS only |
 
-## 💰 Cost Summary
+### Plugin Channels
 
-### Infrastructure
+MS Teams, Matrix, Mattermost, Nostr, Nextcloud Talk, and more.
 
-| Option | Monthly Cost | Best For |
-|--------|-------------|----------|
-| **VM (B1ms)** ⭐ | **~$16** | Production / Daily use |
-| VM (B1s) | ~$9 | Light use |
-| Container | ~$32 | Serverless preference |
-
-### AI Provider Costs (Separate)
-
-| Provider | Casual Use | Heavy Use |
-|----------|-----------|-----------|
-| Anthropic | ~$10/mo | ~$50/mo |
-| OpenAI | ~$10/mo | ~$50/mo |
-| Groq | Free tier | ~$10/mo |
-| Gemini | Free tier | ~$10/mo |
-
-📊 [Detailed VM costs](./vm/#-detailed-cost-breakdown) | [Container costs](./container/#-detailed-cost-breakdown)
+[Full channel catalog →](./CATALOG.md#-messaging-channels)
 
 ---
 
-## Getting Started
+## 💰 Cost
 
-### 1. Get Your API Key
+| Component | Monthly Cost |
+|-----------|-------------|
+| Azure VM (B1ms) | ~$16 |
+| AI Provider | $0-100+ (usage-based) |
 
-| Provider | Where to Get Key |
-|----------|-----------------|
-| Anthropic | [console.anthropic.com](https://console.anthropic.com) |
-| OpenAI | [platform.openai.com](https://platform.openai.com) |
-| Azure OpenAI | [Azure Portal](https://portal.azure.com) |
-| OpenRouter | [openrouter.ai](https://openrouter.ai) |
-| Google | [aistudio.google.com](https://aistudio.google.com) |
-| Groq | [console.groq.com](https://console.groq.com) |
-
-### 2. Get Your Bot Token (Optional)
-
-**Telegram (Easiest):**
-1. Open Telegram → Search @BotFather
-2. Send `/newbot` → Follow prompts
-3. Copy token
-
-**Discord:**
-1. [discord.com/developers](https://discord.com/developers/applications) → New Application
-2. Bot → Add Bot → Copy token
-3. Enable Message Content Intent
-4. OAuth2 → Invite bot to server
-
-### 3. Deploy
-
-Click the button, fill in the form, wait 5 minutes!
-
-[![Deploy Ultimate](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fclark235%2Fopenclaw-azure%2Fmain%2Fvm%2Fazuredeploy-ultimate.json)
+**Free tier option:** Use `telegram-free` preset with Groq = $16/mo total!
 
 ---
 
-## Azure OpenAI Integration
-
-### Option A: Use Existing Azure OpenAI
-
-If you already have Azure OpenAI deployed:
-1. Select "azure-openai" as AI provider
-2. Enter your endpoint URL (e.g., `https://myresource.openai.azure.com`)
-3. Enter your deployment name (e.g., `gpt-4o`)
-4. Enter your API key
-
-### Option B: Deploy New Azure OpenAI
-
-The template can create a new Azure OpenAI resource:
-1. Select "azure-openai" as AI provider
-2. Check "Deploy Azure OpenAI" checkbox
-3. ⚠️ Requires [Azure OpenAI access approval](https://aka.ms/oai/access)
-
----
-
-## What is OpenCLAW?
-
-OpenCLAW is an open-source AI assistant that runs on your own infrastructure.
-
-- 🤖 **8 AI Providers** - Claude, GPT, Gemini, Llama, and more
-- 💬 **Multi-Channel** - Discord, Telegram, WhatsApp, Signal, Slack
-- 🔧 **Extensible** - Skills, plugins, automations
-- 🔒 **Self-Hosted** - Your data stays on your server
-- ☁️ **Azure Native** - Integrates with Azure OpenAI
-
----
-
-## Repository Structure
+## 📁 Repository Structure
 
 ```
 openclaw-azure/
 ├── README.md              ← You are here
-├── vm/                    ← Virtual Machine (~$16/mo)
-│   ├── README.md          ← VM docs & all AI providers
-│   ├── azuredeploy-ultimate.json    ← ⭐ AI + messaging
-│   ├── azuredeploy-quickstart.json  ← Messaging only
-│   ├── azuredeploy.json             ← Basic VM
-│   └── main.bicep
-└── container/             ← Container Instance (~$32/mo)
-    ├── README.md
-    ├── azuredeploy.json
-    └── main.bicep
+├── CATALOG.md            ← All providers + channels
+├── CONTRIBUTING.md       ← How to add new stuff
+│
+├── vm/                   ← VM templates (~$16/mo)
+│   ├── azuredeploy-ultimate.json    ⭐ Full featured
+│   ├── azuredeploy-quickstart.json  Messaging only
+│   └── azuredeploy.json             Basic VM
+│
+├── container/            ← Container templates (~$32/mo)
+│
+├── presets/              ← Ready-to-use configs
+│   ├── telegram-claude.json
+│   ├── discord-gpt4.json
+│   ├── telegram-free.json
+│   └── ...
+│
+├── scripts/              ← CLI deployment tools
+│   ├── deploy.sh         ← Main script
+│   └── quick-deploy.sh   ← Interactive wizard
+│
+└── examples/
+    └── multi-bot-config.json  ← Deploy 10 bots at once
 ```
 
 ---
 
-## CLI Deployment
+## 🔧 CLI Reference
 
+### Deploy a single bot
 ```bash
-# Clone repo
-git clone https://github.com/clark235/openclaw-azure.git
-cd openclaw-azure
+./scripts/deploy.sh --preset <preset-name> --name <bot-name>
+```
 
-# Create resource group
-az group create --name openclaw-rg --location eastus
+### Deploy multiple identical bots
+```bash
+./scripts/deploy.sh --preset <preset-name> --name <base-name> --count 5
+# Creates: base-name-1, base-name-2, ..., base-name-5
+```
 
-# Deploy Ultimate with Anthropic + Telegram
-az deployment group create \
-  --resource-group openclaw-rg \
-  --template-file vm/azuredeploy-ultimate.json \
-  --parameters \
-    adminPasswordOrKey="$(cat ~/.ssh/id_ed25519.pub)" \
-    aiProvider="anthropic" \
-    aiApiKey="sk-ant-..." \
-    messagingChannel="telegram" \
-    telegramBotToken="123:ABC..."
+### Deploy from config file
+```bash
+./scripts/deploy.sh --config my-bots.json
+```
+
+### Options
+```
+--preset <name>       Use a preset configuration
+--name <name>         Bot name (used for Azure resources)
+--count <n>           Deploy n identical instances
+--config <file>       Deploy multiple bots from JSON config
+--location <region>   Azure region (default: eastus)
+--dry-run            Preview without deploying
+--list-presets       Show available presets
+```
+
+### Environment Variables
+```bash
+# AI Providers
+ANTHROPIC_API_KEY    # Anthropic
+OPENAI_API_KEY       # OpenAI
+GROQ_API_KEY         # Groq
+VENICE_API_KEY       # Venice AI
+
+# Channels
+TELEGRAM_TOKEN       # Telegram bot token
+DISCORD_TOKEN        # Discord bot token
+DISCORD_APP_ID       # Discord app ID
+SLACK_BOT_TOKEN      # Slack bot token
+SLACK_APP_TOKEN      # Slack app-level token
 ```
 
 ---
 
-## Resources
+## 🔄 Keeping Updated
 
-- [OpenCLAW Documentation](https://docs.clawd.bot)
-- [OpenCLAW GitHub](https://github.com/clawdbot/clawdbot)
-- [OpenCLAW Discord](https://discord.com/invite/clawd)
-- [Azure OpenAI Access](https://aka.ms/oai/access)
+This repo tracks Clawdbot releases. To get notified of new channels and providers:
+
+1. **Star & Watch** this repo
+2. **Watch** [clawdbot/clawdbot](https://github.com/clawdbot/clawdbot) for releases
+
+Want to add a new provider or channel? See [CONTRIBUTING.md](./CONTRIBUTING.md).
+
+---
+
+## 📚 Resources
+
+- [OpenClaw Documentation](https://docs.clawd.bot)
+- [OpenClaw GitHub](https://github.com/clawdbot/clawdbot)
+- [OpenClaw Discord](https://discord.com/invite/clawd)
+- [Provider Catalog](./CATALOG.md)
+
+---
 
 ## License
 

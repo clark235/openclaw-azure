@@ -1,0 +1,21 @@
+{
+  "$schema": "../schemas/preset.schema.json",
+  "name": "telegram-claude",
+  "description": "Telegram bot with Claude (Anthropic) - Best for getting started",
+  "difficulty": "easy",
+  "monthlyCost": "$16 infra + ~$10-50 AI",
+  "config": {
+    "aiProvider": "anthropic",
+    "aiModel": "anthropic/claude-sonnet-4",
+    "channel": "telegram"
+  },
+  "required": [
+    { "key": "aiApiKey", "env": "ANTHROPIC_API_KEY", "description": "Anthropic API key from console.anthropic.com" },
+    { "key": "telegramToken", "env": "TELEGRAM_TOKEN", "description": "Bot token from @BotFather" }
+  ],
+  "setup": [
+    "1. Get API key: https://console.anthropic.com",
+    "2. Create Telegram bot: Open Telegram → @BotFather → /newbot",
+    "3. Copy the bot token"
+  ]
+}

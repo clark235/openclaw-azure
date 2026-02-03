@@ -1,0 +1,25 @@
+{
+  "$schema": "../schemas/preset.schema.json",
+  "name": "discord-gpt4",
+  "description": "Discord bot with GPT-4o - Great for gaming communities",
+  "difficulty": "medium",
+  "monthlyCost": "$16 infra + ~$10-50 AI",
+  "config": {
+    "aiProvider": "openai",
+    "aiModel": "openai/gpt-4o",
+    "channel": "discord"
+  },
+  "required": [
+    { "key": "aiApiKey", "env": "OPENAI_API_KEY", "description": "OpenAI API key from platform.openai.com" },
+    { "key": "discordToken", "env": "DISCORD_TOKEN", "description": "Discord bot token" },
+    { "key": "discordAppId", "env": "DISCORD_APP_ID", "description": "Discord application ID" }
+  ],
+  "setup": [
+    "1. Get API key: https://platform.openai.com",
+    "2. Create Discord app: https://discord.com/developers/applications",
+    "3. Add bot to application, copy token",
+    "4. Enable 'Message Content Intent' in Bot settings",
+    "5. OAuth2 → URL Generator → bot scope → Send Messages",
+    "6. Use generated URL to add bot to server"
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "$schema": "../schemas/preset.schema.json",
+  "name": "discord-coder",
+  "description": "Discord coding assistant with Claude Opus - Best for dev teams",
+  "difficulty": "medium",
+  "monthlyCost": "$16 infra + ~$50-100 AI",
+  "config": {
+    "aiProvider": "anthropic",
+    "aiModel": "anthropic/claude-opus-4-5",
+    "channel": "discord",
+    "agentConfig": {
+      "systemPrompt": "You are a coding assistant. Help with code reviews, debugging, and technical questions. Always provide code examples when relevant."
+    }
+  },
+  "required": [
+    { "key": "aiApiKey", "env": "ANTHROPIC_API_KEY", "description": "Anthropic API key" },
+    { "key": "discordToken", "env": "DISCORD_TOKEN", "description": "Discord bot token" },
+    { "key": "discordAppId", "env": "DISCORD_APP_ID", "description": "Discord application ID" }
+  ],
+  "setup": [
+    "1. Get API key: https://console.anthropic.com",
+    "2. Create Discord app for your dev server",
+    "3. Add bot with Message Content Intent enabled",
+    "4. Invite to your development server"
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "$schema": "../schemas/preset.schema.json",
+  "name": "teams-enterprise",
+  "description": "Microsoft Teams with Azure OpenAI - Enterprise deployment",
+  "difficulty": "hard",
+  "monthlyCost": "$16 infra + Azure OpenAI costs",
+  "config": {
+    "aiProvider": "azure-openai",
+    "channel": "msteams"
+  },
+  "required": [
+    { "key": "azureEndpoint", "env": "AZURE_OPENAI_ENDPOINT", "description": "Azure OpenAI endpoint URL" },
+    { "key": "azureDeployment", "env": "AZURE_OPENAI_DEPLOYMENT", "description": "Deployment name (e.g., gpt-4o)" },
+    { "key": "aiApiKey", "env": "AZURE_OPENAI_KEY", "description": "Azure OpenAI API key" },
+    { "key": "teamsAppId", "env": "TEAMS_APP_ID", "description": "Teams Bot App ID" },
+    { "key": "teamsAppPassword", "env": "TEAMS_APP_PASSWORD", "description": "Teams Bot App Password" }
+  ],
+  "setup": [
+    "1. Deploy Azure OpenAI resource (requires approval)",
+    "2. Create a deployment for gpt-4o or your preferred model",
+    "3. Register Bot in Azure Bot Service",
+    "4. Configure Teams channel in Bot Service",
+    "5. Install @clawdbot/channel-msteams plugin"
+  ],
+  "plugins": ["@clawdbot/channel-msteams"],
+  "notes": "Requires Azure OpenAI access approval: https://aka.ms/oai/access"
+}

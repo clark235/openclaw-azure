@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "OpenClaw Multi-Bot Config",
+  "type": "object",
+  "required": ["bots"],
+  "properties": {
+    "description": {
+      "type": "string",
+      "description": "Description of this deployment"
+    },
+    "bots": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "preset"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$",
+            "description": "Bot name (lowercase, hyphens only)"
+          },
+          "preset": {
+            "type": "string",
+            "description": "Preset name to use"
+          },
+          "env": {
+            "type": "object",
+            "additionalProperties": { "type": "string" },
+            "description": "Environment variables for this bot"
+          },
+          "location": {
+            "type": "string",
+            "description": "Azure region override"
+          },
+          "notes": {
+            "type": "string",
+            "description": "Notes about this bot"
+          }
+        }
+      }
+    }
+  }
+}

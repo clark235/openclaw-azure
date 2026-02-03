@@ -1,0 +1,21 @@
+{
+  "$schema": "../schemas/preset.schema.json",
+  "name": "telegram-free",
+  "description": "Telegram bot with Groq (free tier) - Zero AI cost to start",
+  "difficulty": "easy",
+  "monthlyCost": "$16 infra + FREE AI tier",
+  "config": {
+    "aiProvider": "groq",
+    "aiModel": "groq/llama-3.3-70b-versatile",
+    "channel": "telegram"
+  },
+  "required": [
+    { "key": "aiApiKey", "env": "GROQ_API_KEY", "description": "Groq API key (free tier available)" },
+    { "key": "telegramToken", "env": "TELEGRAM_TOKEN", "description": "Bot token from @BotFather" }
+  ],
+  "setup": [
+    "1. Get FREE API key: https://console.groq.com",
+    "2. Create Telegram bot: @BotFather → /newbot",
+    "3. Deploy - costs only $16/mo for Azure VM"
+  ]
+}

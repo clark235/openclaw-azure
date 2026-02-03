@@ -1,0 +1,83 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "OpenClaw Preset",
+  "type": "object",
+  "required": ["name", "description", "config", "required"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$",
+      "description": "Preset identifier (lowercase, hyphens only)"
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable description"
+    },
+    "difficulty": {
+      "type": "string",
+      "enum": ["easy", "medium", "hard"],
+      "description": "Setup difficulty level"
+    },
+    "monthlyCost": {
+      "type": "string",
+      "description": "Estimated monthly cost"
+    },
+    "config": {
+      "type": "object",
+      "required": ["aiProvider", "channel"],
+      "properties": {
+        "aiProvider": {
+          "type": "string",
+          "description": "AI provider identifier"
+        },
+        "aiModel": {
+          "type": "string",
+          "description": "Model in provider/model format"
+        },
+        "channel": {
+          "type": "string",
+          "description": "Messaging channel identifier"
+        },
+        "agentConfig": {
+          "type": "object",
+          "description": "Additional agent configuration"
+        }
+      }
+    },
+    "required": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["key", "env", "description"],
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Parameter key name"
+          },
+          "env": {
+            "type": "string",
+            "description": "Environment variable name"
+          },
+          "description": {
+            "type": "string",
+            "description": "What this parameter is"
+          }
+        }
+      }
+    },
+    "setup": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Setup steps"
+    },
+    "plugins": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Required plugin packages"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Additional notes"
+    }
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "$schema": "../schemas/preset.schema.json",
+  "name": "slack-opus",
+  "description": "Slack workspace bot with Claude Opus - Best reasoning for teams",
+  "difficulty": "medium",
+  "monthlyCost": "$16 infra + ~$50-100 AI",
+  "config": {
+    "aiProvider": "anthropic",
+    "aiModel": "anthropic/claude-opus-4-5",
+    "channel": "slack"
+  },
+  "required": [
+    { "key": "aiApiKey", "env": "ANTHROPIC_API_KEY", "description": "Anthropic API key" },
+    { "key": "slackBotToken", "env": "SLACK_BOT_TOKEN", "description": "Slack Bot OAuth token (xoxb-...)" },
+    { "key": "slackAppToken", "env": "SLACK_APP_TOKEN", "description": "Slack App-Level token (xapp-...)" }
+  ],
+  "setup": [
+    "1. Get API key: https://console.anthropic.com",
+    "2. Create Slack app: https://api.slack.com/apps",
+    "3. Enable Socket Mode, get App-Level token",
+    "4. OAuth & Permissions: app_mentions:read, chat:write, im:history, im:read, im:write",
+    "5. Install to workspace, copy Bot OAuth token"
+  ]
+}
