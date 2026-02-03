@@ -24,8 +24,8 @@ cd openclaw-azure
 
 ```bash
 # Single bot
-export ANTHROPIC_API_KEY="sk-ant-..."
-export TELEGRAM_TOKEN="123:ABC..."
+export ANTHROPIC_API_KEY="YOUR_ANTHROPIC_KEY_HERE"
+export TELEGRAM_TOKEN="YOUR_TELEGRAM_TOKEN_HERE"
 ./scripts/deploy.sh --preset telegram-claude --name mybot
 
 # 5 bots at once
@@ -47,6 +47,8 @@ export TELEGRAM_TOKEN="123:ABC..."
 | `discord-coder` | Claude Opus | Discord | Medium | Dev teams |
 | `slack-opus` | Claude Opus | Slack | Medium | Team workspaces |
 | `whatsapp-gpt` | OpenAI GPT-4o | WhatsApp | Medium | Family/friends |
+| `foundry-telegram` | Azure AI Foundry | Telegram | Medium | Your own endpoint |
+| `foundry-discord` | Azure AI Foundry | Discord | Medium | Your own endpoint |
 | `signal-private` | Venice AI | Signal | Hard | Privacy-focused |
 | `teams-enterprise` | Azure OpenAI | MS Teams | Hard | Enterprise |
 
@@ -63,7 +65,8 @@ List all presets:
 |----------|--------|----------|
 | **Anthropic** ⭐ | Claude Opus, Sonnet, Haiku | Best reasoning |
 | **OpenAI** | GPT-4o, GPT-4, o1 | General purpose |
-| **Azure OpenAI** | GPT-4o (your Azure) | Enterprise |
+| **Azure AI Foundry** 🆕 | GPT-4o, Llama, Phi (your endpoint) | Your own Azure endpoint |
+| **Azure OpenAI** | GPT-4o (your deployment) | Enterprise |
 | **Groq** | Llama 3.3 70B | Free tier + fastest |
 | **OpenRouter** | 100+ models | Flexibility |
 | **Google** | Gemini Pro, Flash | Free tier |
@@ -73,6 +76,18 @@ List all presets:
 | **DeepSeek** | DeepSeek Coder | Coding tasks |
 
 [Full provider catalog →](./CATALOG.md#-ai-providers)
+
+### 🏭 Azure AI Foundry Integration
+
+Deploy your own AI endpoint and connect OpenClaw to it:
+
+[![Deploy Full Stack](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fclark235%2Fopenclaw-azure%2Fmain%2Fai-foundry%2Fazuredeploy-fullstack.json)
+
+Or deploy separately:
+- [AI Foundry only](./ai-foundry/) — Get your own endpoint
+- Then use `foundry-telegram` or `foundry-discord` preset
+
+[Azure AI Foundry docs →](./ai-foundry/README.md)
 
 ---
 
@@ -123,10 +138,14 @@ openclaw-azure/
 │
 ├── container/            ← Container templates (~$32/mo)
 │
-├── presets/              ← Ready-to-use configs
+├── ai-foundry/           ← Azure AI Foundry integration
+│   ├── README.md         ← Setup guide
+│   └── azuredeploy-foundry.json  ← Deploy your own endpoint
+│
+├── presets/              ← Ready-to-use configs (10 presets)
 │   ├── telegram-claude.json
 │   ├── discord-gpt4.json
-│   ├── telegram-free.json
+│   ├── foundry-telegram.json  🆕
 │   └── ...
 │
 ├── scripts/              ← CLI deployment tools
@@ -171,17 +190,22 @@ openclaw-azure/
 ### Environment Variables
 ```bash
 # AI Providers
-ANTHROPIC_API_KEY    # Anthropic
-OPENAI_API_KEY       # OpenAI
-GROQ_API_KEY         # Groq
-VENICE_API_KEY       # Venice AI
+ANTHROPIC_API_KEY         # Anthropic
+OPENAI_API_KEY            # OpenAI
+GROQ_API_KEY              # Groq
+VENICE_API_KEY            # Venice AI
+
+# Azure AI Foundry
+AZURE_FOUNDRY_ENDPOINT    # Your AI Foundry endpoint URL
+AZURE_FOUNDRY_DEPLOYMENT  # Model deployment name
+AZURE_FOUNDRY_API_KEY     # API key
 
 # Channels
-TELEGRAM_TOKEN       # Telegram bot token
-DISCORD_TOKEN        # Discord bot token
-DISCORD_APP_ID       # Discord app ID
-SLACK_BOT_TOKEN      # Slack bot token
-SLACK_APP_TOKEN      # Slack app-level token
+TELEGRAM_TOKEN            # Telegram bot token
+DISCORD_TOKEN             # Discord bot token
+DISCORD_APP_ID            # Discord app ID
+SLACK_BOT_TOKEN           # Slack bot token
+SLACK_APP_TOKEN           # Slack app-level token
 ```
 
 ---

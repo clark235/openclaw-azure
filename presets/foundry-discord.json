@@ -1,0 +1,27 @@
+{
+  "$schema": "../schemas/preset.schema.json",
+  "name": "foundry-discord",
+  "description": "Discord bot with Azure AI Foundry - Your own AI endpoint",
+  "difficulty": "medium",
+  "monthlyCost": "$16 VM + Azure AI usage",
+  "config": {
+    "aiProvider": "azure-foundry",
+    "channel": "discord"
+  },
+  "required": [
+    { "key": "azureFoundryEndpoint", "env": "AZURE_FOUNDRY_ENDPOINT", "description": "AI Foundry endpoint (https://xxx.region.models.ai.azure.com)" },
+    { "key": "azureFoundryDeployment", "env": "AZURE_FOUNDRY_DEPLOYMENT", "description": "Model deployment name (e.g., gpt-4o)" },
+    { "key": "aiApiKey", "env": "AZURE_FOUNDRY_API_KEY", "description": "AI Foundry API key" },
+    { "key": "discordToken", "env": "DISCORD_TOKEN", "description": "Discord bot token" },
+    { "key": "discordAppId", "env": "DISCORD_APP_ID", "description": "Discord application ID" }
+  ],
+  "setup": [
+    "1. Deploy AI Foundry: Use ai-foundry/azuredeploy-foundry.json or Azure Portal",
+    "2. Get endpoint URL and API key from AI Foundry portal",
+    "3. Create Discord app: discord.com/developers/applications",
+    "4. Enable Message Content Intent in Bot settings",
+    "5. Add bot to your server",
+    "6. Deploy OpenClaw with this preset"
+  ],
+  "notes": "Use azuredeploy-fullstack.json to deploy AI Foundry + OpenClaw together in one click."
+}

@@ -12,6 +12,7 @@ Use these identifiers in deployment configs and presets.
 | `anthropic` | Anthropic | claude-opus-4-5, claude-sonnet-4, claude-haiku-3-5 | API Key | Best reasoning |
 | `openai` | OpenAI | gpt-4o, gpt-4-turbo, o1, o1-mini | API Key | General purpose |
 | `azure-openai` | Azure OpenAI | gpt-4o (your deployment) | API Key + Endpoint | Enterprise |
+| `azure-foundry` | Azure AI Foundry | gpt-4o, llama, phi, etc. | API Key + Endpoint | Deploy your own endpoint |
 | `openrouter` | OpenRouter | 100+ models | API Key | Multi-provider |
 | `google` | Google AI | gemini-2.0-flash, gemini-pro | API Key | Free tier |
 | `groq` | Groq | llama-3.3-70b, mixtral | API Key | Fastest inference |
@@ -125,9 +126,9 @@ Use these identifiers in deployment configs and presets.
 ```json
 {
   "aiProvider": "anthropic",
-  "aiApiKey": "sk-ant-...",
+  "aiApiKey": "YOUR_ANTHROPIC_KEY_HERE",
   "channel": "telegram",
-  "telegramToken": "123:ABC..."
+  "telegramToken": "YOUR_TELEGRAM_TOKEN_HERE"
 }
 ```
 
@@ -135,22 +136,34 @@ Use these identifiers in deployment configs and presets.
 ```json
 {
   "aiProvider": "anthropic",
-  "aiApiKey": "sk-ant-...",
+  "aiApiKey": "YOUR_ANTHROPIC_KEY_HERE",
   "channels": ["telegram", "discord"],
-  "telegramToken": "123:ABC...",
-  "discordToken": "MTk..."
+  "telegramToken": "YOUR_TELEGRAM_TOKEN_HERE",
+  "discordToken": "YOUR_DISCORD_TOKEN_HERE"
 }
 ```
 
-### Enterprise
+### Azure AI Foundry
+```json
+{
+  "aiProvider": "azure-foundry",
+  "azureFoundryEndpoint": "https://your-project.region.models.ai.azure.com",
+  "azureFoundryDeployment": "gpt-4o",
+  "aiApiKey": "YOUR_AZURE_FOUNDRY_KEY_HERE",
+  "channel": "telegram",
+  "telegramToken": "YOUR_TELEGRAM_TOKEN_HERE"
+}
+```
+
+### Enterprise (Azure OpenAI)
 ```json
 {
   "aiProvider": "azure-openai",
-  "azureEndpoint": "https://myorg.openai.azure.com",
+  "azureEndpoint": "https://your-resource.openai.azure.com",
   "azureDeployment": "gpt-4o",
-  "aiApiKey": "...",
+  "aiApiKey": "YOUR_AZURE_OPENAI_KEY_HERE",
   "channel": "msteams",
-  "teamsAppId": "...",
-  "teamsAppSecret": "..."
+  "teamsAppId": "YOUR_TEAMS_APP_ID_HERE",
+  "teamsAppSecret": "YOUR_TEAMS_APP_SECRET_HERE"
 }
 ```

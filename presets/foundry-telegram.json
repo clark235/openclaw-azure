@@ -1,0 +1,25 @@
+{
+  "$schema": "../schemas/preset.schema.json",
+  "name": "foundry-telegram",
+  "description": "Telegram bot with Azure AI Foundry - Your own AI endpoint",
+  "difficulty": "medium",
+  "monthlyCost": "$16 VM + Azure AI usage",
+  "config": {
+    "aiProvider": "azure-foundry",
+    "channel": "telegram"
+  },
+  "required": [
+    { "key": "azureFoundryEndpoint", "env": "AZURE_FOUNDRY_ENDPOINT", "description": "AI Foundry endpoint (https://xxx.region.models.ai.azure.com)" },
+    { "key": "azureFoundryDeployment", "env": "AZURE_FOUNDRY_DEPLOYMENT", "description": "Model deployment name (e.g., gpt-4o)" },
+    { "key": "aiApiKey", "env": "AZURE_FOUNDRY_API_KEY", "description": "AI Foundry API key" },
+    { "key": "telegramToken", "env": "TELEGRAM_TOKEN", "description": "Bot token from @BotFather" }
+  ],
+  "setup": [
+    "1. Deploy AI Foundry: Use ai-foundry/azuredeploy-foundry.json or Azure Portal",
+    "2. Get endpoint URL from AI Foundry portal (Keys and Endpoint)",
+    "3. Get API key from same location",
+    "4. Create Telegram bot: @BotFather → /newbot",
+    "5. Deploy OpenClaw with this preset"
+  ],
+  "notes": "Deploy AI Foundry first, then use those credentials here. Or use azuredeploy-fullstack.json to deploy both together."
+}

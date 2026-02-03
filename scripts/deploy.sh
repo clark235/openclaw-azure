@@ -66,13 +66,13 @@ ${YELLOW}Environment Variables:${NC}
 
 ${YELLOW}Examples:${NC}
   # Single Telegram bot with Claude
-  export ANTHROPIC_API_KEY="sk-ant-..."
-  export TELEGRAM_TOKEN="123:ABC..."
+  export ANTHROPIC_API_KEY="YOUR_ANTHROPIC_KEY_HERE"
+  export TELEGRAM_TOKEN="YOUR_TELEGRAM_TOKEN_HERE"
   $0 --preset telegram-claude --name mybot
 
   # 5 Discord bots with GPT-4
-  export OPENAI_API_KEY="sk-..."
-  export DISCORD_TOKEN="MTk..."
+  export OPENAI_API_KEY="YOUR_OPENAI_KEY_HERE"
+  export DISCORD_TOKEN="YOUR_DISCORD_TOKEN_HERE"
   $0 --preset discord-gpt4 --name gamebot --count 5
 
   # Deploy from config file
@@ -173,6 +173,11 @@ deploy_single() {
             params="$params aiApiKey=$AZURE_OPENAI_KEY"
             params="$params azureOpenAIEndpoint=$AZURE_OPENAI_ENDPOINT"
             params="$params azureOpenAIDeployment=$AZURE_OPENAI_DEPLOYMENT"
+            ;;
+        azure-foundry)
+            params="$params aiApiKey=$AZURE_FOUNDRY_API_KEY"
+            params="$params azureFoundryEndpoint=$AZURE_FOUNDRY_ENDPOINT"
+            params="$params azureFoundryDeployment=$AZURE_FOUNDRY_DEPLOYMENT"
             ;;
         *) params="$params aiApiKey=$AI_API_KEY" ;;
     esac

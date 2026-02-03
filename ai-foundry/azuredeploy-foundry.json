@@ -1,0 +1,214 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "description": "Deploy Azure AI Foundry with model endpoint for OpenClaw",
+    "_generator": {
+      "name": "openclaw-azure",
+      "version": "1.0.0"
+    }
+  },
+  "parameters": {
+    "projectName": {
+      "type": "string",
+      "defaultValue": "openclaw-ai",
+      "minLength": 2,
+      "maxLength": 32,
+      "metadata": {
+        "description": "Name for the AI Foundry project"
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "eastus",
+      "allowedValues": [
+        "eastus",
+        "eastus2",
+        "westus",
+        "westus3",
+        "swedencentral",
+        "australiaeast"
+      ],
+      "metadata": {
+        "description": "Azure region (must support AI Foundry)"
+      }
+    },
+    "modelName": {
+      "type": "string",
+      "defaultValue": "gpt-4o",
+      "allowedValues": [
+        "gpt-4o",
+        "gpt-4o-mini",
+        "gpt-4",
+        "gpt-35-turbo",
+        "llama-3-1-70b-instruct",
+        "llama-3-1-8b-instruct",
+        "phi-3-medium-128k-instruct",
+        "mistral-large"
+      ],
+      "metadata": {
+        "description": "Model to deploy"
+      }
+    },
+    "modelVersion": {
+      "type": "string",
+      "defaultValue": "2024-08-06",
+      "metadata": {
+        "description": "Model version (for OpenAI models)"
+      }
+    },
+    "sku": {
+      "type": "string",
+      "defaultValue": "Standard",
+      "allowedValues": ["Standard", "GlobalStandard"],
+      "metadata": {
+        "description": "Deployment SKU"
+      }
+    },
+    "capacity": {
+      "type": "int",
+      "defaultValue": 10,
+      "minValue": 1,
+      "maxValue": 100,
+      "metadata": {
+        "description": "Tokens per minute (thousands) - capacity units"
+      }
+    }
+  },
+  "variables": {
+    "hubName": "[concat(parameters('projectName'), '-hub')]",
+    "projectResourceName": "[concat(parameters('projectName'), '-project')]",
+    "deploymentName": "[parameters('modelName')]",
+    "storageAccountName": "[concat('st', uniqueString(resourceGroup().id, parameters('projectName')))]",
+    "keyVaultName": "[concat('kv-', uniqueString(resourceGroup().id, parameters('projectName')))]",
+    "aiServicesName": "[concat(parameters('projectName'), '-aiservices')]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2023-01-01",
+      "name": "[variables('storageAccountName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "kind": "StorageV2",
+      "properties": {
+        "minimumTlsVersion": "TLS1_2",
+        "allowBlobPublicAccess": false
+      }
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults",
+      "apiVersion": "2023-02-01",
+      "name": "[variables('keyVaultName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "sku": {
+          "family": "A",
+          "name": "standard"
+        },
+        "tenantId": "[subscription().tenantId]",
+        "enableRbacAuthorization": true,
+        "enableSoftDelete": true,
+        "softDeleteRetentionInDays": 7
+      }
+    },
+    {
+      "type": "Microsoft.CognitiveServices/accounts",
+      "apiVersion": "2024-04-01-preview",
+      "name": "[variables('aiServicesName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "S0"
+      },
+      "kind": "AIServices",
+      "properties": {
+        "customSubDomainName": "[variables('aiServicesName')]",
+        "publicNetworkAccess": "Enabled"
+      }
+    },
+    {
+      "type": "Microsoft.MachineLearningServices/workspaces",
+      "apiVersion": "2024-04-01",
+      "name": "[variables('hubName')]",
+      "location": "[parameters('location')]",
+      "kind": "Hub",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
+        "[resourceId('Microsoft.CognitiveServices/accounts', variables('aiServicesName'))]"
+      ],
+      "properties": {
+        "friendlyName": "[concat(parameters('projectName'), ' AI Hub')]",
+        "storageAccount": "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
+        "keyVault": "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+      }
+    },
+    {
+      "type": "Microsoft.MachineLearningServices/workspaces",
+      "apiVersion": "2024-04-01",
+      "name": "[variables('projectResourceName')]",
+      "location": "[parameters('location')]",
+      "kind": "Project",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.MachineLearningServices/workspaces', variables('hubName'))]"
+      ],
+      "properties": {
+        "friendlyName": "[concat(parameters('projectName'), ' Project')]",
+        "hubResourceId": "[resourceId('Microsoft.MachineLearningServices/workspaces', variables('hubName'))]"
+      }
+    },
+    {
+      "type": "Microsoft.CognitiveServices/accounts/deployments",
+      "apiVersion": "2024-04-01-preview",
+      "name": "[concat(variables('aiServicesName'), '/', variables('deploymentName'))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.CognitiveServices/accounts', variables('aiServicesName'))]"
+      ],
+      "sku": {
+        "name": "[parameters('sku')]",
+        "capacity": "[parameters('capacity')]"
+      },
+      "properties": {
+        "model": {
+          "format": "OpenAI",
+          "name": "[parameters('modelName')]",
+          "version": "[parameters('modelVersion')]"
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "aiFoundryEndpoint": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts', variables('aiServicesName'))).endpoint]"
+    },
+    "aiFoundryDeployment": {
+      "type": "string",
+      "value": "[variables('deploymentName')]"
+    },
+    "hubName": {
+      "type": "string",
+      "value": "[variables('hubName')]"
+    },
+    "projectName": {
+      "type": "string",
+      "value": "[variables('projectResourceName')]"
+    },
+    "aiServicesName": {
+      "type": "string", 
+      "value": "[variables('aiServicesName')]"
+    },
+    "connectionString": {
+      "type": "string",
+      "value": "[concat('Endpoint=', reference(resourceId('Microsoft.CognitiveServices/accounts', variables('aiServicesName'))).endpoint, ';Deployment=', variables('deploymentName'))]"
+    }
+  }
+}

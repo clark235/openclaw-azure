@@ -1,80 +1,81 @@
 {
   "$schema": "../schemas/multi-bot.schema.json",
   "description": "Example: Deploy 10 bots with different configurations",
+  "note": "Replace YOUR_*_HERE placeholders with real values before deploying",
   "bots": [
     {
       "name": "support-bot",
       "preset": "telegram-claude",
       "env": {
-        "ANTHROPIC_API_KEY": "sk-ant-api03-...",
-        "TELEGRAM_TOKEN": "111:AAA..."
+        "ANTHROPIC_API_KEY": "YOUR_ANTHROPIC_KEY_HERE",
+        "TELEGRAM_TOKEN": "YOUR_TELEGRAM_TOKEN_HERE"
       }
     },
     {
       "name": "gaming-bot",
       "preset": "discord-gpt4",
       "env": {
-        "OPENAI_API_KEY": "sk-...",
-        "DISCORD_TOKEN": "MTk...",
-        "DISCORD_APP_ID": "123..."
+        "OPENAI_API_KEY": "YOUR_OPENAI_KEY_HERE",
+        "DISCORD_TOKEN": "YOUR_DISCORD_TOKEN_HERE",
+        "DISCORD_APP_ID": "YOUR_DISCORD_APP_ID_HERE"
       }
     },
     {
       "name": "dev-bot-1",
       "preset": "discord-coder",
       "env": {
-        "ANTHROPIC_API_KEY": "sk-ant-api03-...",
-        "DISCORD_TOKEN": "MTk...",
-        "DISCORD_APP_ID": "456..."
+        "ANTHROPIC_API_KEY": "YOUR_ANTHROPIC_KEY_HERE",
+        "DISCORD_TOKEN": "YOUR_DISCORD_TOKEN_HERE",
+        "DISCORD_APP_ID": "YOUR_DISCORD_APP_ID_HERE"
       }
     },
     {
       "name": "dev-bot-2",
       "preset": "discord-coder",
       "env": {
-        "ANTHROPIC_API_KEY": "sk-ant-api03-...",
-        "DISCORD_TOKEN": "MTk...",
-        "DISCORD_APP_ID": "789..."
+        "ANTHROPIC_API_KEY": "YOUR_ANTHROPIC_KEY_HERE",
+        "DISCORD_TOKEN": "YOUR_DISCORD_TOKEN_HERE",
+        "DISCORD_APP_ID": "YOUR_DISCORD_APP_ID_HERE"
       }
     },
     {
       "name": "team-bot",
       "preset": "slack-opus",
       "env": {
-        "ANTHROPIC_API_KEY": "sk-ant-api03-...",
-        "SLACK_BOT_TOKEN": "xoxb-...",
-        "SLACK_APP_TOKEN": "xapp-..."
+        "ANTHROPIC_API_KEY": "YOUR_ANTHROPIC_KEY_HERE",
+        "SLACK_BOT_TOKEN": "YOUR_SLACK_BOT_TOKEN_HERE",
+        "SLACK_APP_TOKEN": "YOUR_SLACK_APP_TOKEN_HERE"
       }
     },
     {
       "name": "free-bot-1",
       "preset": "telegram-free",
       "env": {
-        "GROQ_API_KEY": "gsk_...",
-        "TELEGRAM_TOKEN": "222:BBB..."
+        "GROQ_API_KEY": "YOUR_GROQ_KEY_HERE",
+        "TELEGRAM_TOKEN": "YOUR_TELEGRAM_TOKEN_HERE"
       }
     },
     {
       "name": "free-bot-2",
       "preset": "telegram-free",
       "env": {
-        "GROQ_API_KEY": "gsk_...",
-        "TELEGRAM_TOKEN": "333:CCC..."
+        "GROQ_API_KEY": "YOUR_GROQ_KEY_HERE",
+        "TELEGRAM_TOKEN": "YOUR_TELEGRAM_TOKEN_HERE"
       }
     },
     {
       "name": "free-bot-3",
       "preset": "telegram-free",
       "env": {
-        "GROQ_API_KEY": "gsk_...",
-        "TELEGRAM_TOKEN": "444:DDD..."
+        "GROQ_API_KEY": "YOUR_GROQ_KEY_HERE",
+        "TELEGRAM_TOKEN": "YOUR_TELEGRAM_TOKEN_HERE"
       }
     },
     {
       "name": "family-bot",
       "preset": "whatsapp-gpt",
       "env": {
-        "OPENAI_API_KEY": "sk-..."
+        "OPENAI_API_KEY": "YOUR_OPENAI_KEY_HERE"
       },
       "notes": "Requires post-deployment QR scan"
     },
@@ -82,7 +83,7 @@
       "name": "privacy-bot",
       "preset": "signal-private",
       "env": {
-        "VENICE_API_KEY": "...",
+        "VENICE_API_KEY": "YOUR_VENICE_KEY_HERE",
         "SIGNAL_PHONE": "+1234567890"
       },
       "notes": "Requires post-deployment Signal setup"
