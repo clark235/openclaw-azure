@@ -1,0 +1,13 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+    "GITHUB_WEBHOOK_SECRET": "YOUR_GITHUB_WEBHOOK_SECRET_HERE",
+    "CLAWDBOT_WEBHOOK_URL": "http://localhost:18789/hooks/agent",
+    "CLAWDBOT_WEBHOOK_TOKEN": "YOUR_CLAWDBOT_HOOK_TOKEN_HERE",
+    "REPOS_FILTER": "",
+    "DELIVER_TO_CHANNEL": "",
+    "DELIVER_TO": ""
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "github-webhook-bridge",
+  "version": "1.0.0",
+  "description": "Azure Function to bridge GitHub webhooks to Clawdbot",
+  "main": "src/functions/*.js",
+  "scripts": {
+    "start": "func start",
+    "test": "node test.js"
+  },
+  "dependencies": {
+    "@azure/functions": "^4.0.0"
+  },
+  "devDependencies": {
+    "azure-functions-core-tools": "^4.x"
+  }
+}

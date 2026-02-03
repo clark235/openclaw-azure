@@ -91,6 +91,24 @@ Or deploy separately:
 
 ---
 
+## 🔗 Webhooks (GitHub, etc.)
+
+Receive events from external services and let your agent act on them:
+
+[![Deploy GitHub Bridge](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fclark235%2Fopenclaw-azure%2Fmain%2Fwebhooks%2Fgithub-bridge%2Fazuredeploy.json)
+
+**Supported events:**
+- New issues, PRs, comments
+- PR reviews
+- Pushes, releases
+- And more...
+
+Your agent can then respond, triage, or take action using the `gh` CLI.
+
+[Webhook docs →](./webhooks/README.md)
+
+---
+
 ## 💬 Supported Channels
 
 ### Built-in (17 channels!)
@@ -142,10 +160,14 @@ openclaw-azure/
 │   ├── README.md         ← Setup guide
 │   └── azuredeploy-foundry.json  ← Deploy your own endpoint
 │
+├── webhooks/             ← External service bridges
+│   ├── README.md         ← Webhook architecture
+│   └── github-bridge/    ← GitHub → Clawdbot bridge
+│
 ├── presets/              ← Ready-to-use configs (10 presets)
 │   ├── telegram-claude.json
 │   ├── discord-gpt4.json
-│   ├── foundry-telegram.json  🆕
+│   ├── foundry-telegram.json
 │   └── ...
 │
 ├── scripts/              ← CLI deployment tools
