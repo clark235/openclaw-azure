@@ -109,6 +109,22 @@ Your agent can then respond, triage, or take action using the `gh` CLI.
 
 ---
 
+## 🔒 Secure Tunnel (Zero-Trust)
+
+Enterprise-grade deployment with mTLS, private endpoints, and no public ports:
+
+[![Deploy Secure Tunnel](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fclark235%2Fopenclaw-azure%2Fmain%2Fsecure-tunnel%2Fazuredeploy.json)
+
+**Features:**
+- Zero public ports (outbound WebSocket only)
+- mTLS client certificate authentication
+- Azure OpenAI via Private Endpoint
+- VNet isolation for all resources
+
+[Secure tunnel docs →](./secure-tunnel/README.md) | [Tunnel client →](https://github.com/clark235/clawlink)
+
+---
+
 ## 💬 Supported Channels
 
 ### Built-in (17 channels!)
@@ -155,6 +171,10 @@ openclaw-azure/
 │   └── azuredeploy.json             Basic VM
 │
 ├── container/            ← Container templates (~$32/mo)
+│
+├── secure-tunnel/        ← Zero-trust mTLS tunnel (~$38/mo)
+│   ├── README.md         ← Architecture + setup
+│   └── azuredeploy.json  ← One-click secure deploy
 │
 ├── ai-foundry/           ← Azure AI Foundry integration
 │   ├── README.md         ← Setup guide
