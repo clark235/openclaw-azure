@@ -1,0 +1,247 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "description": "VM-based secure tunnel for OpenClaw - Zero public AI ports with private endpoints"
+  },
+  "parameters": {
+    "instanceName": {
+      "type": "string",
+      "maxLength": 15,
+      "metadata": { "description": "Unique name for this OpenClaw instance (max 15 chars)" }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": { "description": "Azure region for deployment" }
+    },
+    "vmSize": {
+      "type": "string",
+      "defaultValue": "Standard_B1ms",
+      "allowedValues": ["Standard_B1ls", "Standard_B1s", "Standard_B1ms", "Standard_B2s"],
+      "metadata": { "description": "VM size (B1ms ~$15/mo)" }
+    },
+    "adminUsername": {
+      "type": "string",
+      "defaultValue": "clawadmin",
+      "metadata": { "description": "SSH admin username" }
+    },
+    "sshPublicKey": {
+      "type": "string",
+      "metadata": { "description": "SSH public key for admin access" }
+    },
+    "openAiModel": {
+      "type": "string",
+      "defaultValue": "gpt-4o-mini",
+      "allowedValues": ["gpt-4o-mini", "gpt-4o", "gpt-4"],
+      "metadata": { "description": "OpenAI model to deploy" }
+    },
+    "tunnelToken": {
+      "type": "securestring",
+      "defaultValue": "[uniqueString(resourceGroup().id, parameters('instanceName'), utcNow())]",
+      "metadata": { "description": "Tunnel authentication token (auto-generated if not provided)" }
+    },
+    "tunnelPort": {
+      "type": "int",
+      "defaultValue": 8443,
+      "metadata": { "description": "Port for tunnel agent" }
+    }
+  },
+  "variables": {
+    "vnetName": "[concat(parameters('instanceName'), '-vnet')]",
+    "vmSubnetName": "vm-subnet",
+    "peSubnetName": "private-endpoints",
+    "nsgName": "[concat(parameters('instanceName'), '-nsg')]",
+    "publicIpName": "[concat(parameters('instanceName'), '-pip')]",
+    "nicName": "[concat(parameters('instanceName'), '-nic')]",
+    "vmName": "[concat(parameters('instanceName'), '-vm')]",
+    "openAiName": "[concat(parameters('instanceName'), '-ai')]",
+    "keyVaultName": "[concat('kv-', take(parameters('instanceName'), 10), '-', take(uniqueString(resourceGroup().id), 4))]",
+    "dnsZoneName": "privatelink.openai.azure.com",
+    "dnsLabel": "[concat('claw-', uniqueString(resourceGroup().id, parameters('instanceName')))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "apiVersion": "2023-05-01",
+      "name": "[variables('nsgName')]",
+      "location": "[parameters('location')]",
+      "tags": { "owner": "clark", "project": "secure-tunnel", "purpose": "vm-tunnel-nsg" },
+      "properties": {
+        "securityRules": [
+          { "name": "SSH", "properties": { "priority": 1000, "direction": "Inbound", "access": "Allow", "protocol": "TCP", "sourcePortRange": "*", "destinationPortRange": "22", "sourceAddressPrefix": "*", "destinationAddressPrefix": "*" } },
+          { "name": "ClawLinkTunnel", "properties": { "priority": 1010, "direction": "Inbound", "access": "Allow", "protocol": "TCP", "sourcePortRange": "*", "destinationPortRange": "[parameters('tunnelPort')]", "sourceAddressPrefix": "*", "destinationAddressPrefix": "*" } }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "2023-05-01",
+      "name": "[variables('vnetName')]",
+      "location": "[parameters('location')]",
+      "tags": { "owner": "clark", "project": "secure-tunnel" },
+      "properties": {
+        "addressSpace": { "addressPrefixes": ["10.0.0.0/16"] },
+        "subnets": [
+          { "name": "[variables('vmSubnetName')]", "properties": { "addressPrefix": "10.0.1.0/24" } },
+          { "name": "[variables('peSubnetName')]", "properties": { "addressPrefix": "10.0.2.0/24", "privateEndpointNetworkPolicies": "Disabled" } }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "apiVersion": "2023-05-01",
+      "name": "[variables('publicIpName')]",
+      "location": "[parameters('location')]",
+      "tags": { "owner": "clark", "project": "secure-tunnel" },
+      "sku": { "name": "Standard" },
+      "properties": { "publicIPAllocationMethod": "Static", "dnsSettings": { "domainNameLabel": "[variables('dnsLabel')]" } }
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "2023-05-01",
+      "name": "[variables('nicName')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [ "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName'))]", "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]", "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]" ],
+      "tags": { "owner": "clark", "project": "secure-tunnel" },
+      "properties": {
+        "ipConfigurations": [{ "name": "ipconfig1", "properties": { "privateIPAllocationMethod": "Dynamic", "publicIPAddress": { "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName'))]" }, "subnet": { "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), variables('vmSubnetName'))]" } } }],
+        "networkSecurityGroup": { "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]" }
+      }
+    },
+    {
+      "type": "Microsoft.CognitiveServices/accounts",
+      "apiVersion": "2023-05-01",
+      "name": "[variables('openAiName')]",
+      "location": "[parameters('location')]",
+      "tags": { "owner": "clark", "project": "secure-tunnel" },
+      "kind": "OpenAI",
+      "sku": { "name": "S0" },
+      "properties": { "customSubDomainName": "[variables('openAiName')]", "publicNetworkAccess": "Disabled", "networkAcls": { "defaultAction": "Deny" } }
+    },
+    {
+      "type": "Microsoft.CognitiveServices/accounts/deployments",
+      "apiVersion": "2023-05-01",
+      "name": "[concat(variables('openAiName'), '/', parameters('openAiModel'))]",
+      "dependsOn": ["[resourceId('Microsoft.CognitiveServices/accounts', variables('openAiName'))]"],
+      "sku": { "name": "Standard", "capacity": 10 },
+      "properties": { "model": { "format": "OpenAI", "name": "[parameters('openAiModel')]", "version": "2024-07-18" } }
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults",
+      "apiVersion": "2023-07-01",
+      "name": "[variables('keyVaultName')]",
+      "location": "[parameters('location')]",
+      "tags": { "owner": "clark", "project": "secure-tunnel" },
+      "properties": { "sku": { "family": "A", "name": "standard" }, "tenantId": "[subscription().tenantId]", "enableRbacAuthorization": true, "accessPolicies": [] }
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-07-01",
+      "name": "[concat(variables('keyVaultName'), '/tunnel-token')]",
+      "dependsOn": ["[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"],
+      "properties": { "value": "[parameters('tunnelToken')]" }
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-07-01",
+      "name": "[concat(variables('keyVaultName'), '/openai-key')]",
+      "dependsOn": [ "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]", "[resourceId('Microsoft.CognitiveServices/accounts', variables('openAiName'))]" ],
+      "properties": { "value": "[listKeys(resourceId('Microsoft.CognitiveServices/accounts', variables('openAiName')), '2023-05-01').key1]" }
+    },
+    {
+      "type": "Microsoft.Network/privateDnsZones",
+      "apiVersion": "2020-06-01",
+      "name": "[variables('dnsZoneName')]",
+      "location": "global",
+      "tags": { "owner": "clark", "project": "secure-tunnel" }
+    },
+    {
+      "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+      "apiVersion": "2020-06-01",
+      "name": "[concat(variables('dnsZoneName'), '/', variables('vnetName'), '-link')]",
+      "location": "global",
+      "dependsOn": [ "[resourceId('Microsoft.Network/privateDnsZones', variables('dnsZoneName'))]", "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]" ],
+      "properties": { "registrationEnabled": false, "virtualNetwork": { "id": "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]" } }
+    },
+    {
+      "type": "Microsoft.Network/privateEndpoints",
+      "apiVersion": "2023-05-01",
+      "name": "[concat(parameters('instanceName'), '-ai-pe')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [ "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]", "[resourceId('Microsoft.CognitiveServices/accounts', variables('openAiName'))]" ],
+      "tags": { "owner": "clark", "project": "secure-tunnel" },
+      "properties": {
+        "subnet": { "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), variables('peSubnetName'))]" },
+        "privateLinkServiceConnections": [{ "name": "[concat(parameters('instanceName'), '-ai-connection')]", "properties": { "privateLinkServiceId": "[resourceId('Microsoft.CognitiveServices/accounts', variables('openAiName'))]", "groupIds": ["account"] } }]
+      }
+    },
+    {
+      "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+      "apiVersion": "2023-05-01",
+      "name": "[concat(parameters('instanceName'), '-ai-pe/default')]",
+      "dependsOn": [ "[resourceId('Microsoft.Network/privateEndpoints', concat(parameters('instanceName'), '-ai-pe'))]", "[resourceId('Microsoft.Network/privateDnsZones', variables('dnsZoneName'))]" ],
+      "properties": { "privateDnsZoneConfigs": [{ "name": "openai-dns-config", "properties": { "privateDnsZoneId": "[resourceId('Microsoft.Network/privateDnsZones', variables('dnsZoneName'))]" } }] }
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "apiVersion": "2023-07-01",
+      "name": "[variables('vmName')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [ "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]", "[resourceId('Microsoft.Network/privateEndpoints/privateDnsZoneGroups', concat(parameters('instanceName'), '-ai-pe'), 'default')]" ],
+      "tags": { "owner": "clark", "project": "secure-tunnel", "purpose": "tunnel-agent" },
+      "properties": {
+        "hardwareProfile": { "vmSize": "[parameters('vmSize')]" },
+        "osProfile": {
+          "computerName": "[variables('vmName')]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "linuxConfiguration": { "disablePasswordAuthentication": true, "ssh": { "publicKeys": [{ "path": "[concat('/home/', parameters('adminUsername'), '/.ssh/authorized_keys')]", "keyData": "[parameters('sshPublicKey')]" }] } }
+        },
+        "storageProfile": {
+          "imageReference": { "publisher": "Canonical", "offer": "ubuntu-24_04-lts", "sku": "server", "version": "latest" },
+          "osDisk": { "createOption": "FromImage", "diskSizeGB": 30, "managedDisk": { "storageAccountType": "Standard_LRS" } }
+        },
+        "networkProfile": { "networkInterfaces": [{ "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]" }] }
+      }
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines/extensions",
+      "apiVersion": "2023-07-01",
+      "name": "[concat(variables('vmName'), '/SetupClawLink')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [ "[resourceId('Microsoft.Compute/virtualMachines', variables('vmName'))]", "[resourceId('Microsoft.CognitiveServices/accounts/deployments', variables('openAiName'), parameters('openAiModel'))]" ],
+      "properties": {
+        "publisher": "Microsoft.Azure.Extensions",
+        "type": "CustomScript",
+        "typeHandlerVersion": "2.1",
+        "autoUpgradeMinorVersion": true,
+        "protectedSettings": {
+          "script": "[base64(concat('#!/bin/bash\nset -e\nexport DEBIAN_FRONTEND=noninteractive\necho \"Starting ClawLink Agent setup...\"\n\n# Install Node.js 22\ncurl -fsSL https://deb.nodesource.com/setup_22.x | bash -\napt-get install -y nodejs\n\n# Create agent directory\nmkdir -p /opt/clawlink-agent\ncd /opt/clawlink-agent\n\n# Create package.json\ncat > package.json << PKGEOF\n{\"name\":\"clawlink-agent\",\"version\":\"1.0.0\",\"main\":\"agent.js\",\"dependencies\":{\"ws\":\"^8.16.0\"}}\nPKGEOF\n\n# Create agent.js\ncat > agent.js << AGENTEOF\nconst http = require(\"http\");\nconst https = require(\"https\");\nconst crypto = require(\"crypto\");\nconst { WebSocketServer } = require(\"ws\");\n\nconst PORT = parseInt(process.env.CLAWLINK_PORT || \"8443\");\nconst TOKEN = process.env.CLAWLINK_TOKEN || \"\";\nconst OPENAI_ENDPOINT = process.env.OPENCLAW_AI_ENDPOINT || \"\";\nconst OPENAI_KEY = process.env.OPENAI_KEY || \"\";\nconst MODEL = process.env.OPENCLAW_MODEL || \"gpt-4o-mini\";\n\nconst clients = new Map();\n\nconst server = http.createServer((req, res) => {\n  if (req.url === \"/health\") {\n    res.writeHead(200, { \"Content-Type\": \"application/json\" });\n    res.end(JSON.stringify({ status: \"ok\", clients: clients.size }));\n    return;\n  }\n  res.writeHead(404);\n  res.end();\n});\n\nconst wss = new WebSocketServer({ server, path: \"/tunnel\" });\n\nwss.on(\"connection\", (ws, req) => {\n  const auth = req.headers[\"authorization\"];\n  if (auth !== \"Bearer \" + TOKEN) {\n    console.log(\"Unauthorized connection attempt\");\n    ws.close(4001, \"Unauthorized\");\n    return;\n  }\n  const clientId = crypto.randomUUID();\n  clients.set(clientId, ws);\n  console.log(\"Client connected:\", clientId);\n  ws.send(JSON.stringify({ type: \"connected\", payload: { clientId } }));\n\n  ws.on(\"message\", async (data) => {\n    try {\n      const msg = JSON.parse(data.toString());\n      await handleMessage(ws, msg);\n    } catch (e) {\n      ws.send(JSON.stringify({ type: \"error\", payload: { message: e.message } }));\n    }\n  });\n\n  ws.on(\"close\", () => {\n    clients.delete(clientId);\n    console.log(\"Client disconnected:\", clientId);\n  });\n});\n\nasync function handleMessage(ws, msg) {\n  switch (msg.type) {\n    case \"ping\":\n      ws.send(JSON.stringify({ type: \"pong\", id: msg.id }));\n      break;\n    case \"session.message\":\n      await handleChat(ws, msg);\n      break;\n    case \"session.status\":\n      ws.send(JSON.stringify({ type: \"response\", id: msg.id, payload: { instance: \"clawlink-vm\", model: MODEL, uptime: process.uptime() } }));\n      break;\n    default:\n      ws.send(JSON.stringify({ type: \"error\", id: msg.id, payload: { message: \"Unknown type: \" + msg.type } }));\n  }\n}\n\nasync function handleChat(ws, msg) {\n  const content = msg.payload?.content;\n  if (!content) {\n    ws.send(JSON.stringify({ type: \"error\", id: msg.id, payload: { message: \"Missing content\" } }));\n    return;\n  }\n  try {\n    const response = await callOpenAI(content);\n    ws.send(JSON.stringify({ type: \"response\", id: msg.id, payload: { content: response } }));\n  } catch (e) {\n    ws.send(JSON.stringify({ type: \"error\", id: msg.id, payload: { message: e.message } }));\n  }\n}\n\nfunction callOpenAI(userMessage) {\n  return new Promise((resolve, reject) => {\n    const url = new URL(OPENAI_ENDPOINT + \"/openai/deployments/\" + MODEL + \"/chat/completions?api-version=2024-02-15-preview\");\n    const body = JSON.stringify({ messages: [{ role: \"user\", content: userMessage }], max_tokens: 1000 });\n    const req = https.request(url, { method: \"POST\", headers: { \"Content-Type\": \"application/json\", \"api-key\": OPENAI_KEY } }, (res) => {\n      let data = \"\";\n      res.on(\"data\", (chunk) => data += chunk);\n      res.on(\"end\", () => {\n        try {\n          const json = JSON.parse(data);\n          if (json.error) reject(new Error(json.error.message));\n          else resolve(json.choices?.[0]?.message?.content || \"No response\");\n        } catch (e) {\n          reject(new Error(\"Parse error: \" + data.substring(0, 200)));\n        }\n      });\n    });\n    req.on(\"error\", reject);\n    req.write(body);\n    req.end();\n  });\n}\n\nserver.listen(PORT, \"0.0.0.0\", () => {\n  console.log(\"ClawLink Agent listening on port \" + PORT);\n  console.log(\"OpenAI Endpoint: \" + OPENAI_ENDPOINT);\n  console.log(\"Model: \" + MODEL);\n});\nAGENTEOF\n\n# Install dependencies\nnpm install\n\n# Set ownership\nchown -R ', parameters('adminUsername'), ':', parameters('adminUsername'), ' /opt/clawlink-agent\n\n# Create environment file\ncat > /opt/clawlink-agent/.env << ENVEOF\nOPENAI_KEY=', listKeys(resourceId('Microsoft.CognitiveServices/accounts', variables('openAiName')), '2023-05-01').key1, '\nENVEOF\nchmod 600 /opt/clawlink-agent/.env\nchown ', parameters('adminUsername'), ':', parameters('adminUsername'), ' /opt/clawlink-agent/.env\n\n# Create systemd service\ncat > /etc/systemd/system/clawlink-agent.service << SVCEOF\n[Unit]\nDescription=ClawLink Tunnel Agent\nAfter=network-online.target\nWants=network-online.target\n\n[Service]\nType=simple\nUser=', parameters('adminUsername'), '\nWorkingDirectory=/opt/clawlink-agent\nEnvironment=NODE_ENV=production\nEnvironment=CLAWLINK_PORT=', parameters('tunnelPort'), '\nEnvironment=CLAWLINK_TOKEN=', parameters('tunnelToken'), '\nEnvironment=OPENCLAW_AI_ENDPOINT=https://', variables('openAiName'), '.openai.azure.com\nEnvironment=OPENCLAW_MODEL=', parameters('openAiModel'), '\nEnvironmentFile=/opt/clawlink-agent/.env\nExecStart=/usr/bin/node /opt/clawlink-agent/agent.js\nRestart=always\nRestartSec=10\n\n[Install]\nWantedBy=multi-user.target\nSVCEOF\n\nsystemctl daemon-reload\nsystemctl enable clawlink-agent\nsystemctl start clawlink-agent\n\ncat > /home/', parameters('adminUsername'), '/CLAWLINK_READY.txt << READYEOF\n=====================================\n  ClawLink Agent Ready!\n=====================================\nTunnel Port: ', parameters('tunnelPort'), '\nModel: ', parameters('openAiModel'), '\n\nCheck status: sudo systemctl status clawlink-agent\nView logs: sudo journalctl -u clawlink-agent -f\nREADYEOF\nchown ', parameters('adminUsername'), ':', parameters('adminUsername'), ' /home/', parameters('adminUsername'), '/CLAWLINK_READY.txt\necho \"ClawLink Agent setup complete!\"\n'))]"
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "instanceName": { "type": "string", "value": "[parameters('instanceName')]" },
+    "vmPublicIp": { "type": "string", "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName'))).ipAddress]" },
+    "vmFqdn": { "type": "string", "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName'))).dnsSettings.fqdn]" },
+    "sshCommand": { "type": "string", "value": "[concat('ssh ', parameters('adminUsername'), '@', reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName'))).dnsSettings.fqdn)]" },
+    "tunnelEndpoint": { "type": "string", "value": "[concat('ws://', reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName'))).dnsSettings.fqdn, ':', parameters('tunnelPort'), '/tunnel')]" },
+    "tunnelToken": { "type": "string", "value": "[parameters('tunnelToken')]" },
+    "keyVaultName": { "type": "string", "value": "[variables('keyVaultName')]" },
+    "openAiEndpoint": { "type": "string", "value": "[concat('https://', variables('openAiName'), '.openai.azure.com/')]" },
+    "clawlinkConfig": {
+      "type": "object",
+      "value": {
+        "version": "1.0",
+        "instance": {
+          "name": "[parameters('instanceName')]",
+          "endpoint": "[concat('ws://', reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName'))).dnsSettings.fqdn, ':', parameters('tunnelPort'), '/tunnel')]",
+          "token": "[parameters('tunnelToken')]",
+          "model": "[parameters('openAiModel')]"
+        }
+      }
+    },
+    "monthlyCostEstimate": { "type": "string", "value": "~$15/mo (VM) + ~$7/mo (networking) + AI usage = ~$22/mo base" }
+  }
+}

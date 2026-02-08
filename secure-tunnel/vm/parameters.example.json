@@ -1,0 +1,24 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "instanceName": {
+      "value": "myinstance"
+    },
+    "location": {
+      "value": "eastus2"
+    },
+    "vmSize": {
+      "value": "Standard_B1ms"
+    },
+    "adminUsername": {
+      "value": "clawadmin"
+    },
+    "sshPublicKey": {
+      "value": "ssh-rsa AAAAB3NzaC1yc2E... your-public-key-here"
+    },
+    "openAiModel": {
+      "value": "gpt-4o-mini"
+    }
+  }
+}
